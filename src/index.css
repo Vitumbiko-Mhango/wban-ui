@@ -1,0 +1,53 @@
+@import url("https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap");
+
+@import "tailwindcss";
+
+@theme {
+  /** Base colors */
+  --color-dark-a0: #000000;
+  --color-light-a0: #ffffff;
+
+  /** Theme primary colors */
+  --color-primary-a0: #0033ff;
+  --color-primary-a10: #162edf;
+  --color-primary-a20: #1e2ac1;
+  --color-primary-a30: #2225a3;
+  --color-primary-a40: #222086;
+  --color-primary-a50: #201b6a;
+
+  /** Theme surface colors */
+  --color-surface-a0: #f3f3f3;
+  --color-surface-a10: #e6e6e6;
+  --color-surface-a20: #d8d8d8;
+  --color-surface-a30: #cbcbcb;
+  --color-surface-a40: #bebebe;
+  --color-surface-a50: #b1b1b1;
+
+  /** Success colors */
+  --color-success-a0: #1b7f5c;
+  --color-success-a10: #28be8a;
+  --color-success-a20: #58dbad;
+
+  /** Warning colors */
+  --color-warning-a0: #b8871f;
+  --color-warning-a10: #dfae44;
+  --color-warning-a20: #ebca85;
+
+  /** Danger colors */
+  --color-danger-a0: #b13535;
+  --color-danger-a10: #d06262;
+  --color-danger-a20: #e29d9d;
+
+  /** Info colors */
+  --color-info-a0: #1e56a3;
+  --color-info-a10: #347ada;
+  --color-info-a20: #74a4e6;
+}
+
+@layer base {
+  body {
+    font-family: "Open Sans", sans-serif;
+    background-color: var(--color-surface-a0);
+    color: var(--color-dark-a0);
+  }
+}
