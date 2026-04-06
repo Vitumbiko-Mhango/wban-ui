@@ -1,8 +1,8 @@
 import { AlertTriangle, Bell, Gauge, Users } from "lucide-react";
 import React from "react";
 import DashboardCard from "../../components/DashboardCard";
-import { Link } from "react-router";
 import AlertCard from "../../components/AlertCard";
+import Heading from "../../components/common/Heading";
 
 const StaffDashboard = () => {
   const dashboardData = [
@@ -33,22 +33,37 @@ const StaffDashboard = () => {
   ];
   const AlertData = [
     {
-      alert: "Abnormal heart rate detected for Robert Chunga: 130.0 bpm",
+      patientName: "Robert Chunga",
+      alert: "High Heart Rate",
+      reading: "120 bpm",
+      dateTime: "3/16/2026, 10:22 PM",
+      status: "active",
+    },
+    {
+      patientName: "Robert Chunga",
+      alert: "High Heart Rate",
+      reading: "120 bpm",
+      dateTime: "3/16/2026, 10:22 PM",
+      status: "active",
+    },
+    {
+      patientName: "Robert Chunga",
+      alert: "High Heart Rate",
+      reading: "120 bpm",
       dateTime: "3/16/2026, 10:22 PM",
       status: "active",
     },
   ];
   return (
     <div>
-      <div>
-        <h3 className="text-2xl text-dark-a0 font-semibold">Dashboard</h3>
-        <p className="text-sm text-dark-a0/70">
-          Real-time patient monitoring overview
-        </p>
-      </div>
+      {/* heading */}
+      <Heading
+        title={"Dashboard"}
+        subtitle={"Real-time patient monitoring overview"}
+      />
 
       {/* dashboard cards container */}
-      <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
         {/* card */}
         {dashboardData.map((item) => (
           <DashboardCard
@@ -73,6 +88,8 @@ const StaffDashboard = () => {
             <AlertCard
               key={item.id}
               alert={item.alert}
+              reading={item.reading}
+              patientName={item.patientName}
               dateTime={item.dateTime}
               status={item.status}
             />

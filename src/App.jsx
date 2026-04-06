@@ -6,6 +6,7 @@ import StaffDashboard from "./pages/staff/StaffDashboard";
 import Alerts from "./pages/staff/Alerts";
 import Patients from "./pages/staff/Patients";
 import NotFound from "./components/NotFound";
+import Security from "./pages/staff/Security";
 
 const App = () => {
   return (
@@ -18,6 +19,7 @@ const App = () => {
           <Route path="dashboard" element={<StaffDashboard />} />
           <Route path="patients" element={<Patients />} />
           <Route path="alerts" element={<Alerts />} />
+          <Route path="security" element={<Security />} />
         </Route>
 
         {/* not found route */}

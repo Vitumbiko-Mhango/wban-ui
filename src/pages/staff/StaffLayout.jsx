@@ -1,6 +1,6 @@
 import React from "react";
 import Layout from "../../components/common/Layout";
-import { Bell, ChartPie, Users } from "lucide-react";
+import { Bell, ChartPie, Lock, Users } from "lucide-react";
 import { Outlet } from "react-router";
 
 const Dashboard = () => {
@@ -19,6 +19,11 @@ const Dashboard = () => {
       name: "Alerts",
       icon: Bell,
       link: "/staff/alerts",
+    },
+    {
+      name: "Security",
+      icon: Lock,
+      link: "/staff/security",
     },
   ];
   return (

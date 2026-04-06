@@ -1,15 +1,31 @@
 import { Database, LogOut, Menu, Wifi } from "lucide-react";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Outlet } from "react-router";
 import { Link, useLocation } from "react-router";
 
 const Layout = ({ menuItems = [] }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const location = useLocation();
-  const dateTime = new Date().toLocaleString("en-US", {
-    dateStyle: "long",
-    timeStyle: "short",
-  });
+
+  const [dateTime, setDateTime] = useState(
+    new Date().toLocaleString("en-US", {
+      dateStyle: "long",
+      timeStyle: "short",
+    }),
+  );
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setDateTime(
+        new Date().toLocaleString("en-US", {
+          dateStyle: "long",
+          timeStyle: "short",
+        }),
+      );
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
 
   const activeTab =
     menuItems.find((item) => item.link === location.pathname)?.name ||
@@ -64,7 +80,7 @@ const Layout = ({ menuItems = [] }) => {
       </aside>
 
       {/* main window */}
-      <div className="flex-1">
+      <div className="flex-1 flex flex-col">
         {/* header */}
         <header className="sticky top-0 bg-primary-a0/10 backdrop-blur-md flex items-center justify-between p-4">
           <div className="flex items-center gap-2">
@@ -83,9 +99,9 @@ const Layout = ({ menuItems = [] }) => {
         </header>
 
         {/* main content */}
-        <div className="flex-1 p-6">
+        <main className="flex-1 p-6">
           <Outlet />
-        </div>
+        </main>
       </div>
 
       {/* mobile sidebar overlay */}
