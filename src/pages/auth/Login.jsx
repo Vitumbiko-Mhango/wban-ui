@@ -1,8 +1,10 @@
-import React from "react";
+import { Eye, EyeOff } from "lucide-react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router";
 
 const Login = () => {
   const navigate = useNavigate();
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = (e) => {
     e.preventDefault();
@@ -33,12 +35,25 @@ const Login = () => {
               <label htmlFor="password" className="block font-medium">
                 Password
               </label>
-              <input
-                type="password"
-                id="password"
-                placeholder="Enter your password"
-                className="mt-1 block w-full px-2 py-2 border border-gray-300 rounded-md shadow-sm placeholder:text-sm focus:outline-none focus:ring-primary-a0 focus:border-blue-500"
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  id="password"
+                  placeholder="••••••••"
+                  className="mt-1 block w-full pl-3 pr-10 py-2  border border-gray-300 rounded-md shadow-sm placeholder:text-sm focus:outline-none focus:ring-primary-a0 focus:border-blue-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-gray-600 hover:text-gray-800 focus:outline-none cursor-pointer"
+                >
+                  {showPassword ? (
+                    <EyeOff className="size-4" />
+                  ) : (
+                    <Eye className="size-4" />
+                  )}
+                </button>
+              </div>
             </div>
 
             <button

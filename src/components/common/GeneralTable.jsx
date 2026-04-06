@@ -4,7 +4,7 @@ import { Search } from "lucide-react";
 const GeneralTable = ({
   tableTitle,
   headers,
-  rows,
+  rows = [],
   renderRows,
   showSearch = true,
 }) => {
@@ -14,11 +14,18 @@ const GeneralTable = ({
     setSearchQuery(e.target.value);
   };
 
-  const filteredRows = rows.filter((row) =>
-    Object.values(row).some((value) =>
-      String(value).toLowerCase().includes(searchQuery.toLowerCase()),
-    ),
-  );
+  const filteredRows =
+    showSearch && searchQuery.trim()
+      ? rows.filter((row) =>
+          Object.values(row).some((value) => {
+            if (value === null || value === undefined) return false;
+            if (typeof value === "object") return false;
+            return String(value)
+              .toLowerCase()
+              .includes(searchQuery.toLowerCase());
+          }),
+        )
+      : rows;
 
   return (
     <div className="space-y-4">
@@ -30,20 +37,21 @@ const GeneralTable = ({
       </div>
 
       {/* Table */}
-      <div className="border border-surface-a30 rounded-lg overflow-hidden p-4 shadow-md">
-        <div className="overflow-x-auto">
-          <div className="flex flex-col md:flex-row md:justify-between mb-4">
+      <div className="border border-surface-a30 rounded-lg overflow-hidden shadow-md">
+        <div className="p-4 overflow-x-auto">
+          <div className="mb-4">
             {/* Search Field */}
             {showSearch && (
-              <div className="mb-4 flex max-w-1/2 items-center gap-2">
-                <Search className="w-5 h-5 text-slate-800" />
+              <div className="relative mb-4 flex max-w-[50%] items-center gap-2">
+                {" "}
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-dark-a0/40" />
                 <input
                   type="search"
                   name="search"
                   id="search"
                   value={searchQuery}
                   onChange={handleSearch}
-                  className="px-4 py-2 border border-surface-a30 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-a20 focus:border-primary-a20 w-full"
+                  className="pl-9 pr-4 py-2 border border-surface-a30 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-a20 focus:border-primary-a20 w-full"
                   placeholder="Search..."
                 />
               </div>

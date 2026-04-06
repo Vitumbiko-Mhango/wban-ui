@@ -82,7 +82,7 @@ const StaffDashboard = () => {
           <h3 className="text-xl font-medium">Recent Alerts</h3>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           {/* alert card */}
           {AlertData.map((item) => (
             <AlertCard

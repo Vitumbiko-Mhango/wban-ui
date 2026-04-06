@@ -22,7 +22,7 @@ const Layout = ({ menuItems = [] }) => {
           timeStyle: "short",
         }),
       );
-    }, 1000);
+    }, 60000);
 
     return () => clearInterval(timer);
   }, []);
@@ -35,7 +35,11 @@ const Layout = ({ menuItems = [] }) => {
     <div className="min-h-screen flex">
       {/* sidebar */}
       <aside
-        className={`absolute left-0 top-0 inset-y-0 z-50 lg:sticky max-h-screen bg-surface-a20 overflow-hidden transition-all duration-300 ${isSidebarOpen ? "translate-x-0 w-64 fixed" : "-translate-x-full w-0 lg:translate-x-0 lg:w-64"}`}
+        className={`absolute left-0 top-0 inset-y-0 z-50 lg:sticky h-screen bg-surface-a20 overflow-y-auto transition-all duration-300 ${
+          isSidebarOpen
+            ? "translate-x-0 w-64 fixed"
+            : "-translate-x-full w-0 lg:translate-x-0 lg:w-64"
+        }`}
       >
         <div className="border-b border-surface-a30 px-4 py-3">
           <div>
@@ -50,10 +54,13 @@ const Layout = ({ menuItems = [] }) => {
               <Link
                 onClick={() => setIsSidebarOpen(false)}
                 to={item.link}
-                className={`flex items-center gap-2 p-2 rounded-lg transition-all duration-300  ${activeTab === item.name ? "text-primary-a20 font-medium bg-primary-a20/10" : "hover:text-primary-a20 hover:bg-surface-a30"}`}
+                className={`flex items-center gap-2 p-2 rounded-lg transition-all duration-300 ${
+                  activeTab === item.name
+                    ? "text-primary-a20 font-medium bg-primary-a20/10"
+                    : "hover:text-primary-a20 hover:bg-surface-a30"
+                }`}
               >
-                <item.icon className="siz-6" />
-                {item.name}
+                <item.icon className="size-6" /> {item.name}
               </Link>
             </div>
           ))}
@@ -80,11 +87,12 @@ const Layout = ({ menuItems = [] }) => {
       </aside>
 
       {/* main window */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-w-0">
         {/* header */}
-        <header className="sticky top-0 bg-primary-a0/10 backdrop-blur-md flex items-center justify-between p-4">
-          <div className="flex items-center gap-2">
-            <button onClick={() => setIsSidebarOpen(true)}>
+        <header className="sticky top-0 z-30 bg-primary-a0/10 backdrop-blur-md flex items-center justify-between p-4">
+          <div className="flex items-center gap-4">
+            <button onClick={() => setIsSidebarOpen((prev) => !prev)}>
+              {" "}
               <Menu className="size-6 lg:hidden" />
             </button>
             <h2 className="font-bold text-sm text-primary-a20 flex flex-col">
@@ -106,7 +114,10 @@ const Layout = ({ menuItems = [] }) => {
 
       {/* mobile sidebar overlay */}
       {isSidebarOpen && (
-        <div className="fixed inset-0 z-40 bg-dark-a0/50 lg:hidden"></div>
+        <div
+          className="fixed inset-0 z-40 bg-dark-a0/50 lg:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+        />
       )}
     </div>
   );
