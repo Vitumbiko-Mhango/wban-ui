@@ -159,7 +159,7 @@ const Alerts = () => {
     [alerts, filter, search],
   );
 
-  const acknowledge = (id) => {
+  const resolve = (id) => {
     setAlerts((prev) =>
       prev.map((a) =>
         a.id === id ? { ...a, severity: "resolved", time: "just now" } : a,
@@ -209,17 +209,17 @@ const Alerts = () => {
             className="pl-9 pr-4 py-2 text-20 w-full border border-surface-a30 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-a20 focus:border-primary-a20"
           />
         </div>
-        {FILTERS.map((f) => (
+        {FILTERS.map((filter) => (
           <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`text-sm  px-3 py-2 rounded-md border transition-colors duration-150 capitalize ${
-              filter === f
+            key={filter}
+            onClick={() => setFilter(filter)}
+            className={`text-sm  px-3 py-2 rounded-md border transition-colors duration-150 capitalize cursor-pointer ${
+              filter === filter
                 ? "bg-primary-a20/10 font-medium text-primary-a20 border-primary-a20/30"
                 : "bg-transparent text-dark-a0/60 border-surface-a30 hover:bg-surface-a20"
             }`}
           >
-            {f}
+            {filter}
           </button>
         ))}
       </div>
@@ -238,13 +238,6 @@ const Alerts = () => {
               key={alert.id}
               className={`flex items-start gap-4 bg-white border border-surface-a30 rounded-lg p-4 ${s.card}`}
             >
-              {/* Avatar */}
-              {/* <div
-                className={`size-10 rounded-full flex items-center justify-center text-sm font-medium shrink-0 ${s.avatar}`}
-              >
-                {alert.initials}
-              </div> */}
-
               {/* Body */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap mb-1">
@@ -282,10 +275,10 @@ const Alerts = () => {
                   </span>
                 ) : (
                   <button
-                    onClick={() => acknowledge(alert.id)}
+                    onClick={() => resolve(alert.id)}
                     className="text-xs font-medium px-3 py-1.5 rounded-md bg-primary-a20/10 text-primary-a20 border border-primary-a20/30 hover:bg-primary-a20/20 transition-colors duration-150 cursor-pointer"
                   >
-                    Acknowledge
+                    Resolve
                   </button>
                 )}
               </div>

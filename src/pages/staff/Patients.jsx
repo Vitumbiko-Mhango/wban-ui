@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import GeneralTable from "../../components/common/GeneralTable";
 import Heading from "../../components/common/Heading";
 import { Cpu, Eye, Plus, SquarePen } from "lucide-react";
@@ -67,13 +67,15 @@ const Patients = () => {
         renderRows={(row) => (
           <tr
             key={row.id}
-            className="border border-surface-a20 hover:bg-surface-a10 cursor-pointer"
+            className="border border-surface-a20 text-sm hover:bg-surface-a10 cursor-pointer"
           >
             <td className="px-6 py-4 whitespace-nowrap">{row.id}</td>
-            <td className="px-6 py-4 font-bol4 whitespace-nowrap">{row.name}</td>
+            <td className="px-6 py-4 font-bol4 whitespace-nowrap">
+              {row.name}
+            </td>
             <td className="px-6 py-4 whitespace-nowrap">{row.ward}</td>
             <td className="px-6 py-4 whitespace-nowrap">{row.bed}</td>
-            <td className="px-6 py-4 text-primary-a20 text-sm flex items-center whitespace-nowrap">
+            <td className="px-6 py-4 text-primary-a20 flex items-center whitespace-nowrap">
               <Cpu className="size-4 inline-block mr-1" />
               {row.assignedDevice}
             </td>

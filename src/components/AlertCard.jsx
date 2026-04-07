@@ -6,7 +6,7 @@ const AlertCard = ({ alert, reading, patientName, dateTime, status }) => {
       <div className="flex items-center gap-2">
         <div className="size-3 bg-warning-a10 rounded-full"></div>
         <div>
-          <h3 className="flex flex-col">
+          <h3 className="flex flex-col text-sm font-medium text-dark-a0">
             {alert} {reading} for {patientName}
             <span className="text-xs text-dark-a0/60 font-normal">
               {dateTime}
@@ -14,7 +14,7 @@ const AlertCard = ({ alert, reading, patientName, dateTime, status }) => {
           </h3>
         </div>
       </div>
-      <div className="bg-danger-a10/20 text-sm text-danger-a10 font-medium py-0.5 px-4 rounded-full capitalize">
+      <div className="bg-danger-a10/20 text-xs text-danger-a0 font-medium py-0.5 px-4 rounded-full capitalize">
         {status}
       </div>
     </div>

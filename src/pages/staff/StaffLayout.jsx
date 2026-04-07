@@ -11,14 +11,14 @@ const Dashboard = () => {
       link: "/staff/dashboard",
     },
     {
-      name: "Patients",
-      icon: Users,
-      link: "/staff/patients",
-    },
-    {
       name: "Alerts",
       icon: Bell,
       link: "/staff/alerts",
+    },
+    {
+      name: "Patients",
+      icon: Users,
+      link: "/staff/patients",
     },
     {
       name: "Security",

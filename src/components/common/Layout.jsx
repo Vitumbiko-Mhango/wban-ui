@@ -96,7 +96,7 @@ const Layout = ({ menuItems = [] }) => {
               <Menu className="size-6 lg:hidden" />
             </button>
             <h2 className="font-bold text-sm text-primary-a20 flex flex-col">
-              NKhatabay District Hospital
+              Mzuzu Central Hospital
               <span className="text-sm font-normal">{dateTime}</span>
             </h2>
           </div>
