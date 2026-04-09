@@ -1,13 +1,13 @@
 import React from "react";
 import Layout from "../../components/common/Layout";
-import { Bell, ChartPie, Lock, Users } from "lucide-react";
+import { Bell, HeartPulse, Home, Lock } from "lucide-react";
 import { Outlet } from "react-router";
 
 const Dashboard = () => {
   const menuItems = [
     {
       name: "Dashboard",
-      icon: ChartPie,
+      icon: Home,
       link: "/staff/dashboard",
     },
     {
@@ -16,8 +16,8 @@ const Dashboard = () => {
       link: "/staff/alerts",
     },
     {
-      name: "Patients",
-      icon: Users,
+      name: "Monitor Patients",
+      icon: HeartPulse,
       link: "/staff/patients",
     },
     {

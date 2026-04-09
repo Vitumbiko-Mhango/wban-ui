@@ -1,7 +1,7 @@
 import React from "react";
 import GeneralTable from "../../components/common/GeneralTable";
 import Heading from "../../components/common/Heading";
-import { Cpu, Eye, Plus, SquarePen } from "lucide-react";
+import { Cpu, Eye, Plus, SquarePen, UserMinus } from "lucide-react";
 import Button from "../../components/common/Button";
 
 const Patients = () => {
@@ -69,23 +69,40 @@ const Patients = () => {
             key={row.id}
             className="border border-surface-a20 text-sm hover:bg-surface-a10 cursor-pointer"
           >
-            <td className="px-6 py-4 whitespace-nowrap">{row.id}</td>
-            <td className="px-6 py-4 font-bol4 whitespace-nowrap">
+            <td className="px-6 py-3 whitespace-nowrap">{row.id}</td>
+            <td className="px-6 py-3 font-medium whitespace-nowrap flex flex-col">
               {row.name}
+              <span className="text-xs font-normal text-dark-a0/60">
+                {row.age}yrs, {row.gender}
+              </span>
             </td>
-            <td className="px-6 py-4 whitespace-nowrap">{row.ward}</td>
-            <td className="px-6 py-4 whitespace-nowrap">{row.bed}</td>
-            <td className="px-6 py-4 text-primary-a20 flex items-center whitespace-nowrap">
-              <Cpu className="size-4 inline-block mr-1" />
-              {row.assignedDevice}
+            <td className="px-6 py-3 whitespace-nowrap">{row.ward}</td>
+            <td className="px-6 py-3 whitespace-nowrap">{row.bed}</td>
+            <td className="px-6 py-3 text-primary-a20 whitespace-nowrap">
+              <div className="flex items-center gap-1">
+                <Cpu className="size-4" />
+                {row.assignedDevice}
+              </div>
             </td>
-            <td className="px-6 py-4 whitespace-nowrap">{row.condition}</td>
-            <td className="px-6 py-4 whitespace-nowrap">
-              <button className="text-sm text-primary-a20 hover:underline cursor-pointer">
-                <Eye className="w-4 h-4 inline-block mr-1" />
+            <td className="px-6 py-3 whitespace-nowrap">{row.condition}</td>
+            <td className="px-6 py-3 space-x-4 whitespace-nowrap">
+              <button
+                title="Monitor Patient"
+                className="text-sm hover:underline cursor-pointer"
+              >
+                <Eye className="size-4  text-primary-a20 inline-block" />
               </button>
-              <button className="ml-4 text-sm text-primary-a0 hover:underline cursor-pointer">
-                <SquarePen className="w-4 h-4 text-primary-a20 inline-block mr-1" />
+              <button
+                title="Edit Patient"
+                className="text-sm hover:underline cursor-pointer"
+              >
+                <SquarePen className="size-4 text-primary-a20 inline-block" />
+              </button>
+              <button
+                title="Discharge Patient"
+                className="text-sm hover:underline cursor-pointer"
+              >
+                <UserMinus className="size-4 text-danger-a0 inline-block" />
               </button>
             </td>
           </tr>

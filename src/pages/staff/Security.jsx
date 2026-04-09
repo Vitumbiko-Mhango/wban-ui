@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, LoaderCircle } from "lucide-react";
 import Heading from "../../components/common/Heading";
 
 const PasswordField = ({ label, value, onChange }) => {
@@ -98,7 +98,14 @@ const SecurityPage = () => {
               disabled={!canSave || saving}
               className="text-sm font-medium px-4 py-2 rounded-md bg-primary-a20 text-white border border-primary-a30 hover:bg-primary-a30 disabled:opacity-45 disabled:cursor-not-allowed transition-colors cursor-pointer"
             >
-              {saving ? "Saving..." : "Save changes"}
+              {saving ? (
+                <span className="flex items-center justify-center gap-2">
+                  <LoaderCircle className="animate-spin size-4 text-light-a0" />
+                  Saving...
+                </span>
+              ) : (
+                "Save changes"
+              )}
             </button>
             <button
               onClick={() => {

@@ -1,8 +1,9 @@
-import { AlertTriangle, Bell, Gauge, Users } from "lucide-react";
+import { Activity, AlertTriangle, Bell, Users } from "lucide-react";
 import React from "react";
 import DashboardCard from "../../components/DashboardCard";
 import AlertCard from "../../components/AlertCard";
 import Heading from "../../components/common/Heading";
+import { Link } from "react-router";
 
 const StaffDashboard = () => {
   const dashboardData = [
@@ -25,9 +26,9 @@ const StaffDashboard = () => {
       iconClass: "text-warning-a10 bg-warning-a10/10",
     },
     {
-      title: "Sensor Readings",
+      title: "Active Monitors",
       total: 1,
-      icon: Gauge,
+      icon: Activity,
       iconClass: "text-success-a10 bg-success-a10/10",
     },
   ];
@@ -36,22 +37,25 @@ const StaffDashboard = () => {
       patientName: "Robert Chunga",
       alert: "High Heart Rate",
       reading: "120 bpm",
-      dateTime: "3/16/2026, 10:22 PM",
-      status: "active",
+      dateTime: "2 min ago",
     },
     {
-      patientName: "Robert Chunga",
-      alert: "High Heart Rate",
-      reading: "120 bpm",
-      dateTime: "3/16/2026, 10:22 PM",
-      status: "active",
+      patientName: "John Mwakikunga",
+      alert: "Temperature Alert",
+      reading: "39°C",
+      dateTime: "5 min ago",
     },
     {
-      patientName: "Robert Chunga",
-      alert: "High Heart Rate",
-      reading: "120 bpm",
-      dateTime: "3/16/2026, 10:22 PM",
-      status: "active",
+      patientName: "Amon Phiri",
+      alert: "Low Oxygen Level",
+      reading: "88%",
+      dateTime: "10 min ago",
+    },
+    {
+      patientName: "Jane Doe",
+      alert: "High Blood Pressure",
+      reading: "150/95 mmHg",
+      dateTime: "15 min ago",
     },
   ];
   return (
@@ -76,13 +80,38 @@ const StaffDashboard = () => {
         ))}
       </div>
 
-      {/* alerts */}
-      <div className="mt-8">
-        <div className="mb-2">
-          <h3 className="text-xl font-medium">Recent Alerts</h3>
+      {/* alerts container and live updates */}
+      <div className="mt-6 grid grid-cols-1 xl:grid-cols-3 gap-6">
+        {/* live updates */}
+        <div className="xl:col-span-2 bg-surface-a10 border border-dark-a0/10 rounded-lg">
+          <div className="p-4">
+            <div>
+              <h3 className="text-lg font-medium">Live Monitoring Preview</h3>
+              <p className="text-sm text-dark-a0/50">
+                Real-time patient vitals overview
+              </p>
+            </div>
+          </div>
         </div>
 
-        <div className="space-y-3">
+        {/* recent alerts */}
+        <div className="bg-surface-a10 border border-dark-a0/10 rounded-lg">
+          <div className="p-4 flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-medium">Recent Alerts</h3>
+              <p className="text-sm text-dark-a0/50">
+                Latest emergency notifications
+              </p>
+            </div>
+            <div>
+              <Link
+                to="/staff/alerts"
+                className="text-sm text-primary-a20 hover:underline"
+              >
+                View All
+              </Link>
+            </div>
+          </div>
           {/* alert card */}
           {AlertData.map((item) => (
             <AlertCard

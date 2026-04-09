@@ -7,6 +7,12 @@ import Alerts from "./pages/staff/Alerts";
 import Patients from "./pages/staff/Patients";
 import NotFound from "./components/NotFound";
 import Security from "./pages/staff/Security";
+import AdminLayout from "./pages/admin/AdminLayout";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import Users from "./pages/admin/Users";
+import Devices from "./pages/admin/Devices";
+import Configurations from "./pages/admin/Configurations";
+import Thresholds from "./pages/admin/Thresholds";
 
 const App = () => {
   return (
@@ -20,6 +26,16 @@ const App = () => {
           <Route path="patients" element={<Patients />} />
           <Route path="alerts" element={<Alerts />} />
           <Route path="security" element={<Security />} />
+        </Route>
+
+        {/* admin routes */}
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route path="dashboard" element={<AdminDashboard />} />
+          <Route path="patients" element={<Patients />} />
+          <Route path="devices" element={<Devices />} />
+          <Route path="thresholds" element={<Thresholds />} />
+          <Route path="users" element={<Users />} />
+          <Route path="configurations" element={<Configurations />} />
         </Route>
 
         {/* not found route */}

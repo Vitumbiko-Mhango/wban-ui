@@ -48,7 +48,7 @@ const Layout = ({ menuItems = [] }) => {
           </div>
         </div>
 
-        <nav className="p-4 mt-2 space-y-3">
+        <nav className="p-4 mt-2 space-y-2">
           {menuItems.map((item, index) => (
             <div key={index}>
               <Link
@@ -60,7 +60,7 @@ const Layout = ({ menuItems = [] }) => {
                     : "hover:text-primary-a20 hover:bg-surface-a30"
                 }`}
               >
-                <item.icon className="size-6" /> {item.name}
+                <item.icon className="size-5" /> {item.name}
               </Link>
             </div>
           ))}
@@ -89,7 +89,7 @@ const Layout = ({ menuItems = [] }) => {
       {/* main window */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* header */}
-        <header className="sticky top-0 z-30 bg-primary-a0/10 backdrop-blur-md flex items-center justify-between p-4">
+        <header className="sticky top-0 z-30 bg-primary-a0/10 backdrop-blur-md flex items-center justify-between p-4.5">
           <div className="flex items-center gap-4">
             <button onClick={() => setIsSidebarOpen((prev) => !prev)}>
               {" "}
@@ -97,7 +97,7 @@ const Layout = ({ menuItems = [] }) => {
             </button>
             <h2 className="font-bold text-sm text-primary-a20 flex flex-col">
               Mzuzu Central Hospital
-              <span className="text-sm font-normal">{dateTime}</span>
+              <span className="text-xs font-normal">{dateTime}</span>
             </h2>
           </div>
           <div className="flex items-center gap-4">

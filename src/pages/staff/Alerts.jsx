@@ -197,6 +197,7 @@ const Alerts = () => {
           </div>
         ))}
       </div>
+
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-48">
@@ -209,17 +210,17 @@ const Alerts = () => {
             className="pl-9 pr-4 py-2 text-20 w-full border border-surface-a30 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-a20 focus:border-primary-a20"
           />
         </div>
-        {FILTERS.map((filter) => (
+        {FILTERS.map((f) => (
           <button
-            key={filter}
-            onClick={() => setFilter(filter)}
+            key={f}
+            onClick={() => setFilter(f)}
             className={`text-sm  px-3 py-2 rounded-md border transition-colors duration-150 capitalize cursor-pointer ${
-              filter === filter
+              filter === f
                 ? "bg-primary-a20/10 font-medium text-primary-a20 border-primary-a20/30"
                 : "bg-transparent text-dark-a0/60 border-surface-a30 hover:bg-surface-a20"
             }`}
           >
-            {filter}
+            {f}
           </button>
         ))}
       </div>
