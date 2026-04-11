@@ -4,6 +4,7 @@ import DashboardCard from "../../components/DashboardCard";
 import AlertCard from "../../components/AlertCard";
 import Heading from "../../components/common/Heading";
 import { Link } from "react-router";
+import { PatientTable } from "../../components/PatientsTable";
 
 const StaffDashboard = () => {
   const dashboardData = [
@@ -57,6 +58,12 @@ const StaffDashboard = () => {
       reading: "150/95 mmHg",
       dateTime: "15 min ago",
     },
+    {
+      patientName: "Emily Ngoma",
+      alert: "Fall Detected",
+      reading: "N/A",
+      dateTime: "20 min ago",
+    },
   ];
   return (
     <div>
@@ -83,8 +90,8 @@ const StaffDashboard = () => {
       {/* alerts container and live updates */}
       <div className="mt-6 grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* live updates */}
-        <div className="xl:col-span-2 bg-surface-a10 border border-dark-a0/10 rounded-lg">
-          <div className="p-4">
+        <div className="xl:col-span-2">
+          <div className="p-4 bg-surface-a10 rounded-t-lg">
             <div>
               <h3 className="text-lg font-medium">Live Monitoring Preview</h3>
               <p className="text-sm text-dark-a0/50">
@@ -92,11 +99,12 @@ const StaffDashboard = () => {
               </p>
             </div>
           </div>
+          <PatientTable />
         </div>
 
         {/* recent alerts */}
-        <div className="bg-surface-a10 border border-dark-a0/10 rounded-lg">
-          <div className="p-4 flex items-center justify-between">
+        <div>
+          <div className="p-4 bg-surface-a10 flex items-center justify-between rounded-t-lg">
             <div>
               <h3 className="text-lg font-medium">Recent Alerts</h3>
               <p className="text-sm text-dark-a0/50">
@@ -113,16 +121,18 @@ const StaffDashboard = () => {
             </div>
           </div>
           {/* alert card */}
-          {AlertData.map((item) => (
-            <AlertCard
-              key={item.id}
-              alert={item.alert}
-              reading={item.reading}
-              patientName={item.patientName}
-              dateTime={item.dateTime}
-              status={item.status}
-            />
-          ))}
+          <div className="border border-dark-a0/10 divide-y divide-dark-a0/10 bg-surface-a0 rounded-b-lg">
+            {AlertData.map((item) => (
+              <AlertCard
+                key={item.id}
+                alert={item.alert}
+                reading={item.reading}
+                patientName={item.patientName}
+                dateTime={item.dateTime}
+                status={item.status}
+              />
+            ))}
+          </div>
         </div>
       </div>
     </div>

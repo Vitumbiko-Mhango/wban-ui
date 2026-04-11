@@ -2,7 +2,7 @@ import React from "react";
 
 const AlertCard = ({ alert, reading, patientName, dateTime }) => {
   return (
-    <div className="bg-surface-a0 border-t border-surface-a10 p-4">
+    <div className="p-4">
       <div className="flex items-center gap-2">
         <div className="size-3 bg-warning-a10 rounded-full"></div>
         <div>
