@@ -1,13 +1,13 @@
 import React from "react";
 import Layout from "../../components/common/Layout";
 import { Outlet } from "react-router";
-import { Bed, Cpu, HeartCrack, Home, Settings, Settings2, Users } from "lucide-react";
+import { Bed, Cpu, HeartCrack, LayoutDashboard, Settings, Settings2, Users } from "lucide-react";
 
 const AdminLayout = () => {
   const menuItems = [
     {
       name: "Dashboard",
-      icon: Home,
+      icon: LayoutDashboard,
       link: "/admin/dashboard",
     },
     {

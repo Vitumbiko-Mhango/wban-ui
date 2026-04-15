@@ -16,12 +16,13 @@
   --color-primary-a50: #201b6a;
 
   /** Theme surface colors */
-  --color-surface-a0: #f3f3f3;
-  --color-surface-a10: #e6e6e6;
-  --color-surface-a20: #d8d8d8;
-  --color-surface-a30: #cbcbcb;
-  --color-surface-a40: #bebebe;
-  --color-surface-a50: #b1b1b1;
+  --color-surface-a0: #ffffff;
+  --color-surface-a10: #f0f0f0;
+  --color-surface-a20: #e1e1e1;
+  --color-surface-a30: #d3d3d3;
+  --color-surface-a40: #c5c5c5;
+  --color-surface-a50: #b6b6b6;
+
 
   /** Success colors */
   --color-success-a0: #1b7f5c;
@@ -51,3 +52,4 @@
     color: var(--color-dark-a0);
   }
 }
+z
