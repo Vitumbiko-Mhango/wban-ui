@@ -51,7 +51,7 @@ const SecurityPage = () => {
     <div>
       {/* heading */}
       <Heading title="Security Settings" subtitle={"Manage your password"} />
-      <div className="max-w-md space-y-4">
+      <div className="max-w-md space-y-4 mt-8">
         <div className="bg-white border border-surface-a30 rounded-lg p-6 space-y-4">
           <div>
             <h2 className="text-sm font-medium text-dark-a0">

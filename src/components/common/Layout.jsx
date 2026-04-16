@@ -91,7 +91,7 @@ const Layout = ({ menuItems = [] }) => {
         {/* header */}
         <header className="sticky top-0 z-30 bg-primary-a0/10 backdrop-blur-md flex items-center justify-between p-4.5">
           <div className="flex items-center gap-4">
-            <button onClick={() => setIsSidebarOpen((prev) => !prev)}>
+            <button onClick={() => setIsSidebarOpen((prev) => !prev)} className="cursor-pointer">
               {" "}
               <Menu className="size-6 lg:hidden" />
             </button>

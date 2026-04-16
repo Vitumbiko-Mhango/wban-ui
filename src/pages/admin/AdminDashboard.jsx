@@ -36,7 +36,7 @@ const AdminDashboard = () => {
       <Heading title="Admin Dashboard" subtitle="Overview of the system." />
 
       {/* dashboard cards container */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4 mt-8">
         {/* card */}
         {dashboardData.map((item) => (
           <DashboardCard
