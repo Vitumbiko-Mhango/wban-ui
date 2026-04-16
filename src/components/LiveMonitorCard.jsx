@@ -1,4 +1,4 @@
-import { AlertTriangle, Heart, Thermometer } from "lucide-react";
+import { AlertTriangle, Bed, Heart, Thermometer } from "lucide-react";
 import React from "react";
 import {
   Area,
@@ -95,12 +95,12 @@ const LiveMonitorCard = () => {
         </div>
         {/* reading */}
         <div className="col-span-2 bg-surface-a10 p-2 rounded-lg flex items-center justify-center gap-2">
-          <Heart className="size-4 text-danger-a10" />
+          <Bed className="size-4 text-primary-a20" />
           <div className="text-dark-a0/60 text-sm flex flex-col">
-            HR{" "}
+            Falls{" "}
             <div className="space-x-1">
-              <span className="text-dark-a0 font-bold">100</span>
-              <span className="text-xs">bpm</span>
+              <span className="text-dark-a0 font-bold">Not detected</span>
+              {/* <span className="text-xs">bpm</span> */}
             </div>
           </div>
         </div>

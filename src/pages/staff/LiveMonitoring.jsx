@@ -5,13 +5,13 @@ import LiveMonitorCard from "../../components/LiveMonitorCard";
 const LiveMonitoring = () => {
   return (
     <div>
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between">
         <Heading
           title={"Live Patient Monitoring"}
           subtitle={"Real-time patient vitals with auto-refresh every 3 seconds"}
         />
 
-        <div className="flex items-center gap-1 text-dark-a0/80 text-sm">
+        <div className="mt-2 flex items-center gap-1 text-dark-a0/80 text-sm md:mt-0">
           <div className="size-2 bg-success-a0 rounded-full animate-pulse"></div>
           Live
         </div>
