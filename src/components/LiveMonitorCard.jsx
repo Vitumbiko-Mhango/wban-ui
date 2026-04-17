@@ -1,5 +1,10 @@
-import { AlertTriangle, Bed, Heart, Thermometer } from "lucide-react";
-import React from "react";
+import {
+  AlertTriangle,
+  Bed,
+  CheckCircle,
+  Heart,
+  Thermometer,
+} from "lucide-react";
 import {
   Area,
   AreaChart,
@@ -10,97 +15,89 @@ import {
   YAxis,
 } from "recharts";
 
-const LiveMonitorCard = () => {
-  const patientData = [
-    {
-      id: 1,
-      bpm: 80,
-      temp: 36,
-      time: "10:27",
-    },
-    {
-      id: 1,
-      bpm: 60,
-      temp: 36,
-      time: "10:30",
-    },
-    {
-      id: 1,
-      bpm: 90,
-      temp: 36,
-      time: "10:45",
-    },
-    {
-      id: 1,
-      bpm: 78,
-      temp: 36,
-      time: "10:55",
-    },
-    {
-      id: 1,
-      bpm: 80,
-      temp: 36,
-      time: "11:05",
-    },
-    {
-      id: 1,
-      bpm: 100,
-      temp: 36,
-      time: "11:05",
-    },
-    {
-      id: 1,
-      bpm: 81,
-      temp: 36,
-      time: "11:05",
-    },
-  ];
+const HR_HIGH = 100;
+const HR_LOW = 50;
+const TEMP_HIGH = 38;
+const TEMP_LOW = 35;
+
+const TOOLTIP_STYLE = {
+  background: "var(--color-surface-a20)",
+  border: "1px solid var(--color-surface-a30)",
+  borderRadius: "8px",
+  fontSize: "12px",
+};
+
+function deriveStatus({ hr, temp }) {
+  return hr > HR_HIGH || hr < HR_LOW || temp > TEMP_HIGH || temp < TEMP_LOW
+    ? "warning"
+    : "normal";
+}
+
+const LiveMonitorCard = ({
+  name,
+  ward,
+  bed,
+  hr,
+  temp,
+  fallsDetected = false,
+  hrData,
+  tempData,
+}) => {
+  const isWarning = deriveStatus({ hr, temp }) === "warning";
+
   return (
     <div className="border border-surface-a20 p-4 rounded-lg">
       {/* heading */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="font-bold">Robert Chunga</h3>
-          <p className="text-xs text-dark-a0/60">Male Ward • Bed-12</p>
+          <h3 className="font-bold">{name}</h3>
+          <p className="text-xs text-dark-a0/60">
+            {ward} · {bed}
+          </p>
         </div>
-        <div className="text-xs text-warning-a0 px-2 py-0.5 rounded-lg inline-flex items-center gap-1 bg-warning-a0/20">
-          <AlertTriangle className="size-4" />
-          Warning
-        </div>
+        {isWarning ? (
+          <div className="text-xs text-warning-a0 px-2 py-0.5 rounded-lg inline-flex items-center gap-1 bg-warning-a0/20">
+            <AlertTriangle className="size-4" /> Warning
+          </div>
+        ) : (
+          <div className="text-xs text-success-a0 px-2 py-0.5 rounded-lg inline-flex items-center gap-1 bg-success-a0/20">
+            <CheckCircle className="size-4" /> Normal
+          </div>
+        )}
       </div>
 
-      {/* readings container */}
+      {/* readings */}
       <div className="grid grid-cols-2 gap-4 mt-6">
-        {/* reading */}
         <div className="bg-surface-a10 p-2 rounded-lg flex items-center justify-center gap-2">
           <Heart className="size-4 text-danger-a10" />
           <div className="text-dark-a0/60 text-sm flex flex-col">
-            HR{" "}
+            HR
             <div className="space-x-1">
-              <span className="text-dark-a0 font-bold">100</span>
+              <span className="text-dark-a0 font-bold">{hr}</span>
               <span className="text-xs">bpm</span>
             </div>
           </div>
         </div>
-        {/* reading */}
+
         <div className="bg-surface-a10 p-2 rounded-lg flex items-center justify-center gap-2">
           <Thermometer className="size-4 text-warning-a10" />
           <div className="text-dark-a0/60 text-sm flex flex-col">
-            TEMP{" "}
+            TEMP
             <div className="space-x-1">
-              <span className="text-dark-a0 font-bold">34</span>
+              <span className="text-dark-a0 font-bold">{temp}</span>
               <span className="text-xs">°C</span>
             </div>
           </div>
         </div>
-        {/* reading */}
+
         <div className="col-span-2 bg-surface-a10 p-2 rounded-lg flex items-center justify-center gap-2">
           <Bed className="size-4 text-primary-a20" />
           <div className="text-dark-a0/60 text-sm flex flex-col">
-            Falls{" "}
+            Falls
             <div className="space-x-1">
-              <span className="text-dark-a0 font-bold">Not detected</span>
-              {/* <span className="text-xs">bpm</span> */}
+              <span className="text-dark-a0 font-bold">
+                {fallsDetected ? "Detected" : "Not detected"}
+              </span>
             </div>
           </div>
         </div>
@@ -108,13 +105,10 @@ const LiveMonitorCard = () => {
 
       {/* heart rate trend */}
       <div className="mt-4">
-        <div className="mb-2">
-          <h3 className="text-dark-a0/60 text-sm">Heart Rate Trend</h3>
-        </div>
-
+        <h3 className="text-dark-a0/60 text-sm mb-2">Heart Rate Trend</h3>
         <div className="h-24">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={patientData}>
+            <AreaChart data={hrData}>
               <defs>
                 <linearGradient id="bpmGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop
@@ -132,14 +126,7 @@ const LiveMonitorCard = () => {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="time" hide />
               <YAxis hide domain={["auto", "auto"]} />
-              <Tooltip
-                contentStyle={{
-                  background: "var(--color-surface-a20)",
-                  border: "1px solid var(--color-surface-a30)",
-                  borderRadius: "8px",
-                  fontSize: "12px",
-                }}
-              />
+              <Tooltip contentStyle={TOOLTIP_STYLE} />
               <Area
                 type="monotone"
                 dataKey="bpm"
@@ -152,15 +139,12 @@ const LiveMonitorCard = () => {
         </div>
       </div>
 
-      {/* temperature rate trend */}
+      {/* temperature trend */}
       <div className="mt-4">
-        <div className="mb-2">
-          <h3 className="text-dark-a0/60 text-sm">Temperature Rate Trend</h3>
-        </div>
-
+        <h3 className="text-dark-a0/60 text-sm mb-2">Temperature Trend</h3>
         <div className="h-24">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={patientData}>
+            <AreaChart data={tempData}>
               <defs>
                 <linearGradient id="tempGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop
@@ -178,17 +162,10 @@ const LiveMonitorCard = () => {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="time" hide />
               <YAxis hide domain={["auto", "auto"]} />
-              <Tooltip
-                contentStyle={{
-                  background: "var(--color-surface-a20)",
-                  border: "1px solid var(--color-surface-a30)",
-                  borderRadius: "8px",
-                  fontSize: "12px",
-                }}
-              />
+              <Tooltip contentStyle={TOOLTIP_STYLE} />
               <Area
                 type="monotone"
-                dataKey="bpm"
+                dataKey="temp"
                 stroke="var(--color-primary-a20)"
                 strokeWidth={2}
                 fill="url(#tempGradient)"
