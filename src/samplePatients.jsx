@@ -6,6 +6,7 @@ export const samplePatients = [
     hr: 100,
     temp: 34,
     fallsDetected: false,
+    assignedDevice: "ESP32-A1",
     hrData: [
       { time: "10:27", bpm: 80 },
       { time: "10:30", bpm: 60 },
@@ -32,6 +33,7 @@ export const samplePatients = [
     hr: 72,
     temp: 36.8,
     fallsDetected: false,
+    assignedDevice: "ESP32-A2",
     hrData: [
       { time: "09:00", bpm: 70 },
       { time: "09:15", bpm: 74 },
@@ -58,6 +60,7 @@ export const samplePatients = [
     hr: 45,
     temp: 38.5,
     fallsDetected: true,
+    assignedDevice: "ESP32-A3",
     hrData: [
       { time: "08:00", bpm: 55 },
       { time: "08:15", bpm: 50 },
@@ -84,6 +87,7 @@ export const samplePatients = [
     hr: 110,
     temp: 36.9,
     fallsDetected: false,
+    assignedDevice: "ESP32-A4",
     hrData: [
       { time: "09:00", bpm: 110 },
       { time: "09:15", bpm: 108 },
@@ -110,6 +114,7 @@ export const samplePatients = [
     hr: 95,
     temp: 36.7,
     fallsDetected: false,
+    assignedDevice: "ESP32-A5",
     hrData: [
       { time: "09:00", bpm: 95 },
       { time: "09:15", bpm: 94 },
@@ -136,6 +141,7 @@ export const samplePatients = [
     hr: 85,
     temp: 36.7,
     fallsDetected: false,
+    assignedDevice: "ESP32-A6",
     hrData: [
       { time: "09:00", bpm: 85 },
       { time: "09:15", bpm: 84 },

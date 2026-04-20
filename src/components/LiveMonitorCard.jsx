@@ -2,6 +2,7 @@ import {
   AlertTriangle,
   Bed,
   CheckCircle,
+  Cpu,
   Heart,
   Thermometer,
 } from "lucide-react";
@@ -42,6 +43,7 @@ const LiveMonitorCard = ({
   fallsDetected = false,
   hrData,
   tempData,
+  assignedDevice,
 }) => {
   const isWarning = deriveStatus({ hr, temp }) === "warning";
 
@@ -49,11 +51,18 @@ const LiveMonitorCard = ({
     <div className="border border-surface-a20 p-4 rounded-lg">
       {/* heading */}
       <div className="flex items-center justify-between">
-        <div>
-          <h3 className="font-bold">{name}</h3>
-          <p className="text-xs text-dark-a0/60">
-            {ward} · {bed}
-          </p>
+        <div className="space-y-1">
+          <h3 className="font-bold flex flex-col">
+            {name}
+            <span className="text-xs font-normal text-dark-a0/80">
+              {ward} · {bed}
+            </span>
+          </h3>
+          {/* <p className="text-xs text-dark-a0/60"></p> */}
+          <div className="flex items-center gap-1 text-sm text-primary-a20 font-bold">
+            <Cpu className="size-4" />
+            <span>{assignedDevice}</span>
+          </div>
         </div>
         {isWarning ? (
           <div className="text-xs text-warning-a0 px-2 py-0.5 rounded-lg inline-flex items-center gap-1 bg-warning-a0/20">
