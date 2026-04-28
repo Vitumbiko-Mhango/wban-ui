@@ -3,6 +3,7 @@ import GeneralTable from "../../components/common/GeneralTable";
 import Heading from "../../components/common/Heading";
 import { Cpu, Eye, Plus, SquarePen, UserMinus } from "lucide-react";
 import Button from "../../components/common/Button";
+import PatientForm from "../../components/PatientForm";
 
 const Patients = () => {
   const patientsData = [
@@ -108,6 +109,8 @@ const Patients = () => {
           </tr>
         )}
       />
+
+      <PatientForm />
     </div>
   );
 };
