@@ -1,5 +1,6 @@
 import {
   AlertTriangle,
+  Annoyed,
   Bed,
   CheckCircle,
   Cpu,
@@ -99,13 +100,25 @@ const LiveMonitorCard = ({
           </div>
         </div>
 
-        <div className="col-span-2 bg-surface-a10 p-2 rounded-lg flex items-center justify-center gap-2">
+        <div className="bg-surface-a10 p-2 rounded-lg flex items-center justify-center gap-2">
           <Bed className="size-4 text-primary-a20" />
           <div className="text-dark-a0/60 text-sm flex flex-col">
             Falls
             <div className="space-x-1">
               <span className="text-dark-a0 font-bold">
                 {fallsDetected ? "Detected" : "Not detected"}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-surface-a10 p-2 rounded-lg flex items-center justify-center gap-2">
+          <Annoyed className="size-4 text-danger-a0" />
+          <div className="text-dark-a0/60 text-sm flex flex-col">
+            Stress
+            <div className="space-x-1">
+              <span className="text-dark-a0 font-bold">
+                {fallsDetected ? "Stressed" : "Not stressed"}
               </span>
             </div>
           </div>
