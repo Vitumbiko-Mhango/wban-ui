@@ -2,12 +2,12 @@ import { X } from "lucide-react";
 import React from "react";
 import Button from "./common/Button";
 
-const PatientForm = () => {
+const PatientForm = ({ closeForm }) => {
   return (
     <div className="absolute z-50 inset-0 flex items-center justify-center bg-dark-a0/80">
       <form className="relative bg-light-a0 p-6 rounded-lg max-w-2xl max-h-[90vh] overflow-y-auto w-full">
         <div className="absolute right-6">
-          <button className="text-dark-a0/60 hover:text-dark-a0 cursor-pointer">
+          <button onClick={closeForm} type="button" className="text-dark-a0/60 hover:text-dark-a0 cursor-pointer">
             <X className="size-4" />
           </button>
         </div>
@@ -170,8 +170,8 @@ const PatientForm = () => {
 
           {/* buttons */}
           <div className="flex justify-end gap-4">
-            <Button size="md" variant="secondary">Cancel</Button>
-            <Button size="md">Add Patient</Button>
+            <Button size="md" variant="secondary" onClick={closeForm} type="button">Cancel</Button>
+            <Button size="md" type="submit">Add Patient</Button>
           </div>
         </div>
       </form>

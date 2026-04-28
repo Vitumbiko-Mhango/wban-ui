@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import GeneralTable from "../../components/common/GeneralTable";
 import Heading from "../../components/common/Heading";
 import { Cpu, Eye, Plus, SquarePen, UserMinus } from "lucide-react";
@@ -6,6 +6,8 @@ import Button from "../../components/common/Button";
 import PatientForm from "../../components/PatientForm";
 
 const Patients = () => {
+  const [openForm, setOpenForm] = useState(false);
+
   const patientsData = [
     {
       id: "PT-2026-001",
@@ -15,7 +17,8 @@ const Patients = () => {
       ward: "Cardiology",
       bed: "B12",
       assignedDevice: "ESP32-A1",
-      condition: "Stable",
+      status: "Stable",
+      condition: "Severe Malaria"
     },
     {
       id: "PT-2026-002",
@@ -25,7 +28,8 @@ const Patients = () => {
       ward: "Neurology",
       bed: "B15",
       assignedDevice: "ESP32-B1",
-      condition: "Critical",
+      status: "Critical",
+      condition: "aspiration pneumonia"
     },
     {
       id: "PT-2026-003",
@@ -35,7 +39,8 @@ const Patients = () => {
       ward: "Orthopedics",
       bed: "B20",
       assignedDevice: "ESP32-C1",
-      condition: "Stable",
+      status: "Stable",
+      condition: "asthma exacerbation"
     },
   ];
 
@@ -48,7 +53,7 @@ const Patients = () => {
       />
 
       <div className="flex justify-end">
-        <Button variant="primary" size="md" iconLeft={Plus}>
+        <Button variant="primary" size="md" iconLeft={Plus} onClick={() => setOpenForm(true)}>
           Add Patient
         </Button>
       </div>
@@ -61,7 +66,7 @@ const Patients = () => {
           "Ward",
           "Bed",
           "Assigned Device",
-          "Condition",
+          "status",
           "Actions",
         ]}
         rows={patientsData}
@@ -74,7 +79,7 @@ const Patients = () => {
             <td className="px-6 py-3 font-medium whitespace-nowrap flex flex-col">
               {row.name}
               <span className="text-xs font-normal text-dark-a0/60">
-                {row.age}yrs, {row.gender}
+                {row.age}yrs, {row.gender} - {row.condition}
               </span>
             </td>
             <td className="px-6 py-3 whitespace-nowrap">{row.ward}</td>
@@ -85,7 +90,7 @@ const Patients = () => {
                 {row.assignedDevice}
               </div>
             </td>
-            <td className="px-6 py-3 whitespace-nowrap">{row.condition}</td>
+            <td className="px-6 py-3 whitespace-nowrap">{row.status}</td>
             <td className="px-6 py-3 space-x-4 whitespace-nowrap">
               <button
                 title="Monitor Patient"
@@ -110,7 +115,7 @@ const Patients = () => {
         )}
       />
 
-      <PatientForm />
+      {openForm && <PatientForm closeForm={() => setOpenForm(false)} />}
     </div>
   );
 };
