@@ -4,9 +4,11 @@ import Heading from "../../components/common/Heading";
 import { Cpu, Eye, Plus, SquarePen, UserMinus } from "lucide-react";
 import Button from "../../components/common/Button";
 import PatientForm from "../../components/PatientForm";
+import PatientDetails from "../../components/PatientDetails";
 
 const Patients = () => {
   const [openForm, setOpenForm] = useState(false);
+  const [openDetails, setOpenDetails] = useState(false);
 
   const patientsData = [
     {
@@ -93,7 +95,8 @@ const Patients = () => {
             <td className="px-6 py-3 whitespace-nowrap">{row.status}</td>
             <td className="px-6 py-3 space-x-4 whitespace-nowrap">
               <button
-                title="Monitor Patient"
+                title="View Patient"
+                onClick={() => setOpenDetails(true)}
                 className="text-sm hover:underline cursor-pointer"
               >
                 <Eye className="size-4  text-primary-a20 inline-block" />
@@ -116,6 +119,7 @@ const Patients = () => {
       />
 
       {openForm && <PatientForm closeForm={() => setOpenForm(false)} />}
+      {openDetails && <PatientDetails closeForm={() => setOpenDetails(false)} />}
     </div>
   );
 };
