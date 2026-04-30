@@ -5,7 +5,6 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Button from "./common/Button";
 
-// ✅ Dynamic schema
 const getSchema = (isEdit) =>
   z.object({
     firstname: z.string().min(2, "Firstname is required"),
@@ -42,7 +41,6 @@ const UserForm = ({ closeForm, onSubmit, user }) => {
     },
   });
 
-  // ✅ Populate form when editing
   useEffect(() => {
     if (user) {
       reset({
@@ -55,15 +53,12 @@ const UserForm = ({ closeForm, onSubmit, user }) => {
     }
   }, [user, reset]);
 
-  // ✅ Focus first invalid field
   const onError = (errors) => {
     const firstField = Object.keys(errors)[0];
     if (firstField) setFocus(firstField);
   };
 
-  // ✅ Submit handler
   const submitHandler = async (data) => {
-    // Remove password if empty during edit
     if (isEdit && !data.password) {
       delete data.password;
     }

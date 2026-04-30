@@ -46,7 +46,7 @@ const PatientForm = ({ closeForm, onSubmit, patient }) => {
     },
   });
 
-  // Populate form when editing
+  
   useEffect(() => {
     if (patient) {
       reset({ ...patient });
