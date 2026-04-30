@@ -23,7 +23,6 @@
   --color-surface-a40: #c5c5c5;
   --color-surface-a50: #b6b6b6;
 
-
   /** Success colors */
   --color-success-a0: #1b7f5c;
   --color-success-a10: #28be8a;
@@ -50,5 +49,23 @@
     font-family: "Open Sans", sans-serif;
     background-color: var(--color-surface-a0);
     color: var(--color-dark-a0);
+  }
+
+  .input {
+    @apply mt-1 block w-full px-3 py-2 border border-surface-a30 rounded-md shadow-sm 
+  placeholder:text-sm focus:outline-none focus:ring-1 
+  focus:ring-primary-a20 focus:border-primary-a20 transition-colors;
+  }
+
+  .input-error {
+    @apply border-danger-a0 focus:ring-danger-a0 focus:border-danger-a0 bg-red-50;
+  }
+
+  .label {
+    @apply block font-medium text-dark-a0/80;
+  }
+
+  .error-text {
+    @apply text-danger-a0 text-sm mt-1;
   }
 }

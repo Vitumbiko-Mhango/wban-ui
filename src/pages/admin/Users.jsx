@@ -1,28 +1,35 @@
-import React from "react";
+import React, { useState } from "react";
 import Heading from "../../components/common/Heading";
 import GeneralTable from "../../components/common/GeneralTable";
 import { Plus, Square, SquarePen, Trash2 } from "lucide-react";
 import Button from "../../components/common/Button";
+import AddUser from "../../components/AddUser";
 
 const Users = () => {
+  const[openAddUser, setOpenAddUser] = useState(false);
+  const[selectedUser, setSelectedUser] = useState(null);
+
   const usersData = [
     {
       id: 1,
-      name: "Dr. Alice Smith",
+      firstname: "Alice",
+      surname: "Smith",
       email: "alice.smith@example.com",
       position: "Cardiologist",
       role: "Admin",
     },
     {
       id: 2,
-      name: "Nurse Bob Johnson",
+      firstname: "Bob",
+      surname: "Johnson",
       email: "bob.johnson@example.com",
       position: "Nurse",
       role: "User",
     },
     {
       id: 3,
-      name: "Dr. Carol Lee",
+      firstname: "Carol",
+      surname: "Lee",
       email: "carol.lee@example.com",
       position: "Pediatrician",
       role: "User",
@@ -38,7 +45,7 @@ const Users = () => {
       />
 
       <div className="flex justify-end">
-        <Button variant="primary" size="md" iconLeft={Plus}>
+        <Button onClick={() => setOpenAddUser(true)} variant="primary" size="md" iconLeft={Plus}>
           Add User
         </Button>
       </div>
@@ -52,7 +59,7 @@ const Users = () => {
             key={user.id}
             className="border border-surface-a20 text-sm hover:bg-surface-a10 cursor-pointer"
           >
-            <td className="px-6 py-4 whitespace-nowrap">{user.name}</td>
+            <td className="px-6 py-4 whitespace-nowrap">{`${user.firstname} ${user.surname}`}</td>
             <td className="px-6 py-4 whitespace-nowrap">{user.email}</td>
             <td className="px-6 py-4 whitespace-nowrap">{user.position}</td>
             <td className="px-6 py-4 whitespace-nowrap">{user.role}</td>
@@ -60,6 +67,7 @@ const Users = () => {
               <button
                 title="Edit User"
                 className="text-sm text-primary-a20 hover:underline cursor-pointer"
+                onClick={() => setSelectedUser(user)}
               >
                 <SquarePen className="size-4 inline-block mr-1 text-primary-a0" />
               </button>
@@ -73,6 +81,14 @@ const Users = () => {
           </tr>
         )}
       />
+
+      {openAddUser && <AddUser closeForm={() => setOpenAddUser(false)} />}
+        {selectedUser && (
+          <AddUser
+            closeForm={() => setSelectedUser(null)}
+            user={selectedUser}
+          />
+        )}
     </div>
   );
 };
