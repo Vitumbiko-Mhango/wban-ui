@@ -97,7 +97,7 @@ const Login = () => {
               <button
                 type="button"
                 onClick={() => setShowPassword((prev) => !prev)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-dark-a0/60 hover:text-primary-a20 cursor-pointer"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-dark-a0/60 hover:text-primary-a20"
               >
                 {showPassword ? (
                   <EyeOff className="size-4" />
@@ -118,7 +118,7 @@ const Login = () => {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full mt-2 py-2 px-4 bg-primary-a20 text-light-a0 font-semibold rounded-md hover:bg-primary-a30 focus:outline-none focus:ring-1 focus:ring-primary-a20 focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-300"
+            className="w-full mt-2 py-2 px-4 bg-primary-a20 text-light-a0 font-semibold rounded-md hover:bg-primary-a30 focus:outline-none focus:ring-1 focus:ring-primary-a20 focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-300 cursor-pointer"
           >
             {isSubmitting ? (
               <span className="flex items-center justify-center gap-2">
