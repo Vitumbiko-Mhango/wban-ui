@@ -79,7 +79,7 @@ const LiveMonitoring = () => {
           }
         />
         <div className="mt-2 flex items-center gap-1 text-dark-a0/80 text-sm md:mt-0">
-          <div className="size-2 bg-success-a0 rounded-full animate-pulse" />
+          <div className="size-2 bg-success-a10 rounded-full animate-pulse" />
           Live
         </div>
       </div>

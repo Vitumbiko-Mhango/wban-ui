@@ -6,7 +6,6 @@ import StaffDashboard from "./pages/staff/StaffDashboard";
 import Alerts from "./pages/staff/Alerts";
 import Patients from "./pages/staff/Patients";
 import NotFound from "./components/NotFound";
-import Security from "./pages/staff/Security";
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import Users from "./pages/admin/Users";
@@ -27,7 +26,6 @@ const App = () => {
           <Route path="patients" element={<Patients />} />
           <Route path="live-monitoring" element={<LiveMonitoring />} />
           <Route path="alerts" element={<Alerts />} />
-          <Route path="security" element={<Security />} />
         </Route>
 
         {/* admin routes */}

@@ -43,9 +43,9 @@ export function PatientTable() {
   ];
 
   const statusStyles = {
-    Normal: "bg-success-a10/20 text-success-a0",
-    Warning: "bg-warning-a10/20 text-warning-a0",
-    Critical: "bg-danger-a10/20 text-danger-a0",
+    Normal: "bg-success-a20 text-success-a10",
+    Warning: "bg-warning-a20 text-warning-a10",
+    Critical: "bg-danger-a20 text-danger-a10",
   };
   return (
     <div className="overflow-hidden bg-surface-a0 border border-dark-a0/10 rounded-b-lg">

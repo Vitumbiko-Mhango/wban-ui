@@ -66,11 +66,11 @@ const LiveMonitorCard = ({
           </div>
         </div>
         {isWarning ? (
-          <div className="text-xs text-warning-a0 px-2 py-0.5 rounded-lg inline-flex items-center gap-1 bg-warning-a0/20">
+          <div className="text-sm text-warning-a10 px-2 py-0.5 rounded-lg inline-flex items-center gap-1 bg-warning-a20">
             <AlertTriangle className="size-4" /> Warning
           </div>
         ) : (
-          <div className="text-xs text-success-a0 px-2 py-0.5 rounded-lg inline-flex items-center gap-1 bg-success-a0/20">
+          <div className="text-sm text-success-a10 px-2 py-0.5 rounded-lg inline-flex items-center gap-1 bg-success-a20">
             <CheckCircle className="size-4" /> Normal
           </div>
         )}

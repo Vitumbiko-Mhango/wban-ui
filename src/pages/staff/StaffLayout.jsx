@@ -21,11 +21,6 @@ const Dashboard = () => {
       icon: Bell,
       link: "/staff/alerts",
     },
-    {
-      name: "Security",
-      icon: Lock,
-      link: "/staff/security",
-    },
   ];
   return (
     <Layout menuItems={menuItems}>

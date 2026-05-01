@@ -18,19 +18,19 @@ const StaffDashboard = () => {
       title: "Alerts",
       total: 3,
       icon: Bell,
-      iconClass: "text-danger-a10 bg-danger-a10/10",
+      iconClass: "text-danger-a10 bg-danger-a20",
     },
     {
       title: "Unresolved Alerts",
       total: 1,
       icon: AlertTriangle,
-      iconClass: "text-warning-a10 bg-warning-a10/10",
+      iconClass: "text-warning-a10 bg-warning-a20",
     },
     {
       title: "Active Monitors",
       total: 1,
       icon: Activity,
-      iconClass: "text-success-a10 bg-success-a10/10",
+      iconClass: "text-success-a10 bg-success-a20",
     },
   ];
   const AlertData = [

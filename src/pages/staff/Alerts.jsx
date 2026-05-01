@@ -10,17 +10,17 @@ import Heading from "../../components/common/Heading";
 
 const SEVERITY_STYLES = {
   critical: {
-    badge: "bg-danger-a10/20 text-danger-a0",
+    badge: "bg-danger-a20 text-danger-a10",
     dot: true,
   },
   warning: {
-    badge: "bg-warning-a10/20 text-warning-a0",
+    badge: "bg-warning-a20 text-warning-a10",
   },
   info: {
     badge: "bg-primary-a20/20 text-primary-a20",
   },
   resolved: {
-    badge: "bg-success-a10/20 text-success-a0",
+    badge: "bg-success-a20 text-success-a10",
   },
 };
 
@@ -181,14 +181,14 @@ const Alerts = () => {
           {
             label: "Critical alerts",
             value: stats.critical,
-            color: "text-danger-a0",
+            color: "text-danger-a10",
           },
-          { label: "Warnings", value: stats.warning, color: "text-warning-a0" },
+          { label: "Warnings", value: stats.warning, color: "text-warning-a10" },
           { label: "Info", value: stats.info, color: "text-primary-a20" },
           {
             label: "Resolved today",
             value: stats.resolved,
-            color: "text-success-a0",
+            color: "text-success-a10",
           },
         ].map((s) => (
           <div key={s.label} className="bg-surface-a20 rounded-lg p-4">

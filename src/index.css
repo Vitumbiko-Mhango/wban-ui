@@ -23,25 +23,25 @@
   --color-surface-a40: #c5c5c5;
   --color-surface-a50: #b6b6b6;
 
-  /** Success colors */
-  --color-success-a0: #1b7f5c;
-  --color-success-a10: #28be8a;
-  --color-success-a20: #58dbad;
+  /** Success (green) */
+  --color-success-a0: #166534;
+  --color-success-a10: #22c55e;
+  --color-success-a20: #dcfce7;
 
-  /** Warning colors */
-  --color-warning-a0: #b8871f;
-  --color-warning-a10: #dfae44;
-  --color-warning-a20: #ebca85;
+  /** Warning (amber) */
+  --color-warning-a0: #92400e;
+  --color-warning-a10: #f59e0b;
+  --color-warning-a20: #fef3c7;
 
-  /** Danger colors */
-  --color-danger-a0: #b13535;
-  --color-danger-a10: #d06262;
-  --color-danger-a20: #e29d9d;
+  /** Danger (red) */
+  --color-danger-a0: #991b1b;
+  --color-danger-a10: #ef4444;
+  --color-danger-a20: #fee2e2;
 
-  /** Info colors */
-  --color-info-a0: #1e56a3;
-  --color-info-a10: #347ada;
-  --color-info-a20: #74a4e6;
+  /** Info (blue) */
+  --color-info-a0: #1e3a8a;
+  --color-info-a10: #3b82f6;
+  --color-info-a20: #dbeafe;
 }
 
 @layer base {

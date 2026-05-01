@@ -20,6 +20,8 @@ const Button = ({
     secondary: "bg-surface-a20 hover:bg-surface-a30 text-dark-a0/80",
     danger: "bg-danger-a0 hover:bg-danger-a10 text-light-a0 ",
     success: "bg-success-a10 hover:bg-success-a20 text-light-a0",
+    outline:
+      "bg-transparent border border-dark-a0/20 hover:bg-dark-a0/5 text-dark-a0",
   };
 
   const sizes = {
