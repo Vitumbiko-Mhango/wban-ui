@@ -3,11 +3,11 @@ import Heading from "../../components/common/Heading";
 import GeneralTable from "../../components/common/GeneralTable";
 import { Plus, Square, SquarePen, Trash2 } from "lucide-react";
 import Button from "../../components/common/Button";
-import AddUser from "../../components/AddUser";
+import AddUserForm from "../../components/AddUserForm";
 
 const Users = () => {
-  const[openAddUser, setOpenAddUser] = useState(false);
-  const[selectedUser, setSelectedUser] = useState(null);
+  const [openAddUser, setOpenAddUser] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
 
   const usersData = [
     {
@@ -33,8 +33,7 @@ const Users = () => {
       email: "carol.lee@example.com",
       position: "Pediatrician",
       role: "User",
-    }
-
+    },
   ];
 
   return (
@@ -45,7 +44,12 @@ const Users = () => {
       />
 
       <div className="flex justify-end">
-        <Button onClick={() => setOpenAddUser(true)} variant="primary" size="md" iconLeft={Plus}>
+        <Button
+          onClick={() => setOpenAddUser(true)}
+          variant="primary"
+          size="md"
+          iconLeft={Plus}
+        >
           Add User
         </Button>
       </div>
@@ -82,13 +86,13 @@ const Users = () => {
         )}
       />
 
-      {openAddUser && <AddUser closeForm={() => setOpenAddUser(false)} />}
-        {selectedUser && (
-          <AddUser
-            closeForm={() => setSelectedUser(null)}
-            user={selectedUser}
-          />
-        )}
+      {openAddUser && <AddUserForm closeForm={() => setOpenAddUser(false)} />}
+      {selectedUser && (
+        <AddUserForm
+          closeForm={() => setSelectedUser(null)}
+          user={selectedUser}
+        />
+      )}
     </div>
   );
 };

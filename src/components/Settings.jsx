@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Eye, EyeOff, LoaderCircle, X } from "lucide-react";
 import Heading from "../components/common/Heading";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Button from "./common/Button";
+import useClickOutside from "../hooks/useClickOutside";
 
 const schema = z
   .object({
@@ -51,6 +52,9 @@ const PasswordField = ({ label, register, name, error }) => {
 };
 
 const Settings = ({ closeForm }) => {
+  const formRef = useRef(null);
+  useClickOutside(formRef, closeForm);
+
   const {
     register,
     handleSubmit,
@@ -72,7 +76,7 @@ const Settings = ({ closeForm }) => {
 
   return (
     <div className="absolute z-50 inset-0 flex items-center justify-center bg-dark-a0/80">
-      <div className="relative bg-light-a0 p-6 m-4 rounded-lg max-w-md w-full">
+      <div ref={formRef} className="relative bg-light-a0 p-6 m-4 rounded-lg max-w-md w-full">
         {/* Heading */}
         <Heading
           title="Security Settings"

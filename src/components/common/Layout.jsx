@@ -9,6 +9,7 @@ import { Outlet } from "react-router";
 import { Link, useLocation } from "react-router";
 import useClickOutside from "../../hooks/useClickOutside";
 import Settings from "../../components/Settings";
+import useOnlineStatus from "../../hooks/useOnlineStatus";
 
 const Layout = ({ menuItems = [] }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -16,6 +17,7 @@ const Layout = ({ menuItems = [] }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const isOnline = useOnlineStatus();
 
   useClickOutside(dropdownRef, () => setIsDropdownOpen(false), isDropdownOpen);
 
@@ -77,6 +79,13 @@ const Layout = ({ menuItems = [] }) => {
             </div>
           ))}
         </nav>
+
+        <div className="absolute bottom-0 left-0 w-full text-sm p-4 border-t border-surface-a30 flex items-center gap-2">
+          <div
+            className={`size-2 rounded-full ${isOnline ? "bg-success-a10 animate-pulse" : "bg-danger-a10"}`}
+          />
+          {isOnline ? "Online" : "Offline"}
+        </div>
       </aside>
 
       {/* main window */}

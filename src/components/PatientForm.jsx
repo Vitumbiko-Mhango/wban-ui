@@ -1,9 +1,10 @@
 import { X } from "lucide-react";
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import Button from "./common/Button";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import useClickOutside from "../hooks/useClickOutside";
 
 const schema = z.object({
   firstname: z.string().min(2, "Firstname is required"),
@@ -23,6 +24,9 @@ const schema = z.object({
 
 const PatientForm = ({ closeForm, onSubmit, patient }) => {
   const isEdit = !!patient;
+  const formRef = useRef(null);
+
+  useClickOutside(formRef, closeForm);
 
   const {
     register,
@@ -46,7 +50,6 @@ const PatientForm = ({ closeForm, onSubmit, patient }) => {
     },
   });
 
-  
   useEffect(() => {
     if (patient) {
       reset({ ...patient });
@@ -65,12 +68,16 @@ const PatientForm = ({ closeForm, onSubmit, patient }) => {
   return (
     <div className="absolute z-50 inset-0 flex items-center justify-center bg-dark-a0/80">
       <form
+        ref={formRef}
         onSubmit={handleSubmit(submitHandler, onError)}
         className="relative bg-light-a0 p-6 rounded-lg max-w-2xl max-h-[90vh] overflow-y-auto w-full m-4"
       >
         {/* Close */}
         <div className="absolute right-6">
-          <X onClick={closeForm} className="size-4 text-dark-a0/60 hover:text-dark-a0 cursor-pointer" />
+          <X
+            onClick={closeForm}
+            className="size-4 text-dark-a0/60 hover:text-dark-a0 cursor-pointer"
+          />
         </div>
 
         {/* Header */}

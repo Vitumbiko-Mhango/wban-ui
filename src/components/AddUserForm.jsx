@@ -1,9 +1,10 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { X, LoaderCircle } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Button from "./common/Button";
+import useClickOutside from "../hooks/useClickOutside";
 
 const getSchema = (isEdit) =>
   z.object({
@@ -21,8 +22,11 @@ const getSchema = (isEdit) =>
       : z.string().min(6, "Password is required"),
   });
 
-const UserForm = ({ closeForm, onSubmit, user }) => {
+const AddUserForm = ({ closeForm, onSubmit, user }) => {
   const isEdit = !!user;
+  const formRef = useRef(null);
+
+  useClickOutside(formRef, closeForm);
 
   const {
     register,
@@ -69,6 +73,7 @@ const UserForm = ({ closeForm, onSubmit, user }) => {
   return (
     <div className="absolute z-50 inset-0 flex items-center justify-center bg-black/50">
       <form
+        ref={formRef}
         onSubmit={handleSubmit(submitHandler, onError)}
         className="relative bg-light-a0 p-6 rounded-lg max-w-xl w-full shadow-lg"
       >
@@ -189,4 +194,4 @@ const UserForm = ({ closeForm, onSubmit, user }) => {
   );
 };
 
-export default UserForm;
+export default AddUserForm;

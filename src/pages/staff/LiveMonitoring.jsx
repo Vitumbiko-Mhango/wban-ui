@@ -113,7 +113,7 @@ const LiveMonitoring = () => {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9 pr-4 py-2 border border-surface-a30 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-a20 focus:border-primary-a20 w-full placeholder:text-sm"
-            placeholder="Search patients, ward, bed..."
+            placeholder="Search patients..."
           />
         </div>
       </div>
