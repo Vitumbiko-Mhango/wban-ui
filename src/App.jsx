@@ -13,6 +13,8 @@ import Devices from "./pages/admin/Devices";
 import Configurations from "./pages/admin/Configurations";
 import Thresholds from "./pages/admin/Thresholds";
 import LiveMonitoring from "./pages/staff/LiveMonitoring";
+import Analytics from "./pages/admin/Analytics";
+import Wards from "./components/Wards";
 
 const App = () => {
   return (
@@ -26,6 +28,7 @@ const App = () => {
           <Route path="patients" element={<Patients />} />
           <Route path="live-monitoring" element={<LiveMonitoring />} />
           <Route path="alerts" element={<Alerts />} />
+          <Route path="wards" element={<Wards />} />
         </Route>
 
         {/* admin routes */}
@@ -34,6 +37,7 @@ const App = () => {
           <Route path="patients" element={<Patients />} />
           <Route path="devices" element={<Devices />} />
           <Route path="thresholds" element={<Thresholds />} />
+          <Route path="analytics" element={<Analytics />} />
           <Route path="users" element={<Users />} />
           <Route path="configurations" element={<Configurations />} />
         </Route>

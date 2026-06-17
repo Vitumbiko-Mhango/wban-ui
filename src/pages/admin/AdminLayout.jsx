@@ -1,7 +1,16 @@
 import React from "react";
 import Layout from "../../components/common/Layout";
 import { Outlet } from "react-router";
-import { Bed, Cpu, HeartCrack, LayoutDashboard, Settings, Settings2, Users } from "lucide-react";
+import {
+  Bed,
+  Cpu,
+  HeartCrack,
+  LayoutDashboard,
+  PieChart,
+  Settings,
+  Settings2,
+  Users,
+} from "lucide-react";
 
 const AdminLayout = () => {
   const menuItems = [
@@ -20,11 +29,16 @@ const AdminLayout = () => {
       icon: Cpu,
       link: "/admin/devices",
     },
-      {
-        name: "Alert Thresholds",
-        icon: Settings2,
-        link: "/admin/thresholds",
-      },
+    {
+      name: "Alert Thresholds",
+      icon: Settings2,
+      link: "/admin/thresholds",
+    },
+    {
+      name: "Analytics",
+      icon: PieChart,
+      link: "/admin/analytics",
+    },
     {
       name: "Users",
       icon: Users,
