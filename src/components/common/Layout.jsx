@@ -1,3 +1,11 @@
+/**
+ * src/components/common/Layout.jsx  (REPLACE YOUR EXISTING FILE)
+ *
+ * Fixes:
+ *  1. Username and initials are read from AuthContext (useAuth) — no longer hardcoded
+ *  2. Logout button calls useAuth().logout() and redirects to /
+ */
+
 import {
   ChevronDown,
   LogOut,
@@ -5,13 +13,16 @@ import {
   Settings as SettingsIcon,
 } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
-import { Outlet } from "react-router";
-import { Link, useLocation } from "react-router";
+import { Outlet, Link, useLocation, useNavigate } from "react-router";
 import useClickOutside from "../../hooks/useClickOutside";
 import Settings from "../../components/Settings";
 import useOnlineStatus from "../../hooks/useOnlineStatus";
+import { useAuth } from "../../context/AuthContext";
 
 const Layout = ({ menuItems = [] }) => {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const location = useLocation();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -37,9 +48,22 @@ const Layout = ({ menuItems = [] }) => {
         }),
       );
     }, 60000);
-
     return () => clearInterval(timer);
   }, []);
+
+  // ── Derive display name and initials from the logged-in user ────────────────
+  const firstName =
+    user?.first_name || user?.firstname || user?.username || "User";
+  const lastName = user?.last_name || user?.lastname || "";
+  const fullName = lastName ? `${firstName} ${lastName}` : firstName;
+  const initials = (firstName[0] + (lastName[0] || "")).toUpperCase();
+
+  // ── Logout ───────────────────────────────────────────────────────────────────
+  const handleLogout = async () => {
+    setIsDropdownOpen(false);
+    await logout();
+    navigate("/", { replace: true });
+  };
 
   const activeTab =
     menuItems.find((item) => item.link === location.pathname)?.name ||
@@ -47,7 +71,7 @@ const Layout = ({ menuItems = [] }) => {
 
   return (
     <div className="min-h-screen flex">
-      {/* sidebar */}
+      {/* Sidebar */}
       <aside
         className={`absolute left-0 top-0 inset-y-0 z-50 lg:sticky h-screen bg-surface-a20 overflow-y-auto transition-all duration-300 ${
           isSidebarOpen
@@ -56,10 +80,8 @@ const Layout = ({ menuItems = [] }) => {
         }`}
       >
         <div className="border-b border-surface-a30 px-4 py-3">
-          <div>
-            <h2 className="text-primary-a20 text-xl font-bold">WBAN</h2>
-            <p className="text-sm text-dark-a0/50">Patient Monitoring System</p>
-          </div>
+          <h2 className="text-primary-a20 text-xl font-bold">WBAN</h2>
+          <p className="text-sm text-dark-a0/50">Patient Monitoring System</p>
         </div>
 
         <nav className="p-4 mt-2 space-y-2">
@@ -88,16 +110,15 @@ const Layout = ({ menuItems = [] }) => {
         </div>
       </aside>
 
-      {/* main window */}
+      {/* Main window */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* header */}
+        {/* Header */}
         <header className="sticky top-0 z-30 bg-primary-a0/10 backdrop-blur-md flex items-center justify-between p-4.5">
           <div className="flex items-center gap-4">
             <button
               onClick={() => setIsSidebarOpen((prev) => !prev)}
               className="cursor-pointer"
             >
-              {" "}
               <Menu className="size-6 lg:hidden" />
             </button>
             <h2 className="font-bold text-sm text-primary-a20 flex flex-col">
@@ -106,22 +127,28 @@ const Layout = ({ menuItems = [] }) => {
             </h2>
           </div>
 
-          {/* dropdown profile */}
+          {/* Profile dropdown */}
           <div ref={dropdownRef} className="relative">
             <button
               onClick={() => setIsDropdownOpen((prev) => !prev)}
               className="flex items-center gap-2 cursor-pointer"
             >
-              <span className="flex items-center justify-center text-sm text-white bg-primary-a20 p-2 rounded-full">
-                VM
+              {/* Avatar circle with dynamic initials */}
+              <span className="flex items-center justify-center text-sm text-white bg-primary-a20 p-2 rounded-full size-9 font-semibold">
+                {initials}
               </span>
-              <div className="text-left">
-                <span className="text-sm font-bold">Vitumbiko Mhango</span>
+              <div className="text-left hidden sm:block">
+                <span className="text-sm font-bold">{fullName}</span>
+                {user?.role && (
+                  <span className="block text-xs text-dark-a0/50 capitalize">
+                    {user.role}
+                  </span>
+                )}
               </div>
               <ChevronDown className="size-4 text-dark-a0/50" />
             </button>
 
-            {/* logout and settings */}
+            {/* Dropdown menu */}
             <div
               className={`absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg overflow-hidden transform transition-all duration-200 ${
                 isDropdownOpen
@@ -140,7 +167,11 @@ const Layout = ({ menuItems = [] }) => {
                 Settings
               </button>
 
-              <button className="flex items-center gap-2 px-4 py-2 w-full text-left hover:bg-dark-a0/10 transition-colors cursor-pointer">
+              {/* ✅ Logout now actually logs out */}
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 px-4 py-2 w-full text-left hover:bg-dark-a0/10 transition-colors cursor-pointer text-danger-a0"
+              >
                 <LogOut className="size-4" />
                 Logout
               </button>
@@ -148,7 +179,7 @@ const Layout = ({ menuItems = [] }) => {
           </div>
         </header>
 
-        {/* main content */}
+        {/* Main content */}
         <main className="flex-1 p-4 md:p-6">
           <Outlet />
           {isSettingsOpen && (
@@ -157,7 +188,7 @@ const Layout = ({ menuItems = [] }) => {
         </main>
       </div>
 
-      {/* mobile sidebar overlay */}
+      {/* Mobile sidebar overlay */}
       {isSidebarOpen && (
         <div
           className="fixed inset-0 z-40 bg-dark-a0/50 lg:hidden"

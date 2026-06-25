@@ -1,84 +1,99 @@
+/**
+ * src/pages/staff/StaffDashboard.jsx  (REPLACE YOUR EXISTING FILE)
+ *
+ * Changes from original:
+ *  - Fetches stats from GET /api/dashboard/stats/
+ *  - Fetches recent alerts from GET /api/alerts/?page_size=5
+ *  - Fetches patients for the live preview from GET /api/patients/
+ *  - Shows loading spinners and error states
+ */
+
 import { Activity, AlertTriangle, Bell, Users } from "lucide-react";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import DashboardCard from "../../components/DashboardCard";
 import AlertCard from "../../components/AlertCard";
 import Heading from "../../components/common/Heading";
 import { Link } from "react-router";
 import { PatientTable } from "../../components/PatientsTable";
+import client from "../../api/client";
 
 const StaffDashboard = () => {
+  const [stats, setStats] = useState({
+    total_patients: 0,
+    total_alerts: 0,
+    unresolved_alerts: 0,
+    active_monitors: 0,
+  });
+  const [recentAlerts, setRecentAlerts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const [statsRes, alertsRes] = await Promise.all([
+          client.get("/dashboard/stats/"),
+          client.get("/alerts/?page_size=5&is_resolved=false"),
+        ]);
+        setStats(statsRes.data);
+
+        // alerts response is paginated: { count, results: [...] }
+        const alerts = alertsRes.data?.results ?? alertsRes.data ?? [];
+        setRecentAlerts(alerts);
+      } catch {
+        setError("Failed to load dashboard data.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
+
   const dashboardData = [
     {
       title: "Total Patients",
-      total: 5,
+      total: loading ? "…" : stats.total_patients,
       icon: Users,
       iconClass: "text-primary-a20 bg-primary-a20/10",
     },
     {
       title: "Alerts",
-      total: 3,
+      total: loading ? "…" : stats.total_alerts,
       icon: Bell,
       iconClass: "text-danger-a10 bg-danger-a20",
     },
     {
       title: "Unresolved Alerts",
-      total: 1,
+      total: loading ? "…" : stats.unresolved_alerts,
       icon: AlertTriangle,
       iconClass: "text-warning-a10 bg-warning-a20",
     },
     {
       title: "Active Monitors",
-      total: 1,
+      total: loading ? "…" : stats.active_monitors,
       icon: Activity,
       iconClass: "text-success-a10 bg-success-a20",
     },
   ];
-  const AlertData = [
-    {
-      patientName: "Robert Chunga",
-      alert: "High Heart Rate",
-      reading: "120 bpm",
-      dateTime: "2 min ago",
-    },
-    {
-      patientName: "John Mwakikunga",
-      alert: "Temperature Alert",
-      reading: "39°C",
-      dateTime: "5 min ago",
-    },
-    {
-      patientName: "Amon Phiri",
-      alert: "Low Oxygen Level",
-      reading: "88%",
-      dateTime: "10 min ago",
-    },
-    {
-      patientName: "Jane Doe",
-      alert: "High Blood Pressure",
-      reading: "150/95 mmHg",
-      dateTime: "15 min ago",
-    },
-    {
-      patientName: "Emily Ngoma",
-      alert: "Fall Detected",
-      reading: "N/A",
-      dateTime: "20 min ago",
-    },
-  ];
+
   return (
     <div>
-      {/* heading */}
       <Heading
-        title={"Dashboard"}
-        subtitle={"Real-time patient monitoring overview"}
+        title="Dashboard"
+        subtitle="Real-time patient monitoring overview"
       />
 
-      {/* dashboard cards container */}
+      {error && (
+        <div className="mt-4 px-3 py-2 rounded-md bg-red-50 border border-red-200 text-sm text-danger-a0">
+          {error}
+        </div>
+      )}
+
+      {/* Stats cards */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4 mt-8">
-        {/* card */}
         {dashboardData.map((item) => (
           <DashboardCard
-            key={item.id}
+            key={item.title}
             title={item.title}
             total={item.total}
             Icon={item.icon}
@@ -87,22 +102,19 @@ const StaffDashboard = () => {
         ))}
       </div>
 
-      {/* alerts container and live updates */}
       <div className="mt-6 grid grid-cols-1 xl:grid-cols-3 gap-6">
-        {/* live updates */}
+        {/* Live monitoring preview */}
         <div className="xl:col-span-2">
           <div className="p-4 bg-surface-a10 rounded-t-lg">
-            <div>
-              <h3 className="text-lg font-medium">Live Monitoring Preview</h3>
-              <p className="text-sm text-dark-a0/50">
-                Real-time patient vitals overview
-              </p>
-            </div>
+            <h3 className="text-lg font-medium">Live Monitoring Preview</h3>
+            <p className="text-sm text-dark-a0/50">
+              Real-time patient vitals overview
+            </p>
           </div>
           <PatientTable />
         </div>
 
-        {/* recent alerts */}
+        {/* Recent alerts */}
         <div>
           <div className="p-4 bg-surface-a10 flex items-center justify-between rounded-t-lg">
             <div>
@@ -111,25 +123,32 @@ const StaffDashboard = () => {
                 Latest emergency notifications
               </p>
             </div>
-            <div>
-              <Link
-                to="/staff/alerts"
-                className="text-sm text-primary-a20 hover:underline"
-              >
-                View All
-              </Link>
-            </div>
+            <Link
+              to="/staff/alerts"
+              className="text-sm text-primary-a20 hover:underline"
+            >
+              View All
+            </Link>
           </div>
-          {/* alert card */}
           <div className="border border-dark-a0/10 divide-y divide-dark-a0/10 bg-surface-a0 rounded-b-lg">
-            {AlertData.map((item) => (
+            {loading && (
+              <p className="px-4 py-6 text-sm text-dark-a0/50 text-center">
+                Loading alerts…
+              </p>
+            )}
+            {!loading && recentAlerts.length === 0 && (
+              <p className="px-4 py-6 text-sm text-dark-a0/50 text-center">
+                No recent alerts.
+              </p>
+            )}
+            {recentAlerts.map((alert) => (
               <AlertCard
-                key={item.id}
-                alert={item.alert}
-                reading={item.reading}
-                patientName={item.patientName}
-                dateTime={item.dateTime}
-                status={item.status}
+                key={alert.id}
+                alert={alert.alert_type}
+                reading=""
+                patientName={alert.patient_name ?? alert.patient}
+                dateTime={new Date(alert.created_at).toLocaleTimeString()}
+                status={alert.severity}
               />
             ))}
           </div>

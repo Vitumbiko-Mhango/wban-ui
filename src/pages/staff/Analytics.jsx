@@ -1,0 +1,545 @@
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  Activity,
+  AlertTriangle,
+  Download,
+  HeartPulse,
+  RefreshCw,
+  Thermometer,
+  Users,
+  Wifi,
+} from "lucide-react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Legend,
+  Line,
+  LineChart,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+import DashboardCard from "../../components/DashboardCard";
+import Button from "../../components/common/Button";
+import Heading from "../../components/common/Heading";
+
+const FALLBACK_ANALYTICS = {
+  patients: {
+    total: 24,
+    active: 18,
+    discharged: 6,
+    by_ward: [
+      { ward: "ICU", count: 4 },
+      { ward: "Cardiology", count: 5 },
+      { ward: "Neurology", count: 3 },
+      { ward: "Orthopedics", count: 6 },
+      { ward: "Ward 3", count: 6 },
+    ],
+    by_gender: [
+      { gender: "male", count: 14 },
+      { gender: "female", count: 10 },
+    ],
+  },
+  readings: {
+    avg_heart_rate: 82.4,
+    avg_temperature: 37.1,
+    avg_spo2: 96.8,
+    falls_today: 1,
+  },
+  alerts: {
+    total_last_30_days: 52,
+    by_type: [
+      { type: "heart_rate", count: 14 },
+      { type: "temperature", count: 9 },
+      { type: "spo2", count: 12 },
+      { type: "stress", count: 10 },
+      { type: "fall", count: 7 },
+    ],
+    by_severity: [
+      { severity: "critical", count: 8 },
+      { severity: "warning", count: 24 },
+      { severity: "normal", count: 20 },
+    ],
+  },
+  devices: {
+    online: 6,
+    offline: 3,
+  },
+  daily_readings: [
+    { date: "2026-06-17", count: 118 },
+    { date: "2026-06-18", count: 132 },
+    { date: "2026-06-19", count: 126 },
+    { date: "2026-06-20", count: 148 },
+    { date: "2026-06-21", count: 139 },
+    { date: "2026-06-22", count: 154 },
+    { date: "2026-06-23", count: 142 },
+  ],
+  daily_alerts: [
+    { date: "2026-06-17", count: 6 },
+    { date: "2026-06-18", count: 9 },
+    { date: "2026-06-19", count: 5 },
+    { date: "2026-06-20", count: 11 },
+    { date: "2026-06-21", count: 7 },
+    { date: "2026-06-22", count: 8 },
+    { date: "2026-06-23", count: 6 },
+  ],
+};
+
+const TYPE_COLORS = ["#1e2ac1", "#f59e0b", "#3b82f6", "#22c55e", "#ef4444"];
+const SEVERITY_COLORS = {
+  critical: "#ef4444",
+  warning: "#f59e0b",
+  normal: "#22c55e",
+};
+const GENDER_COLORS = ["#1e2ac1", "#22c55e", "#f59e0b"];
+
+const formatLabel = (value = "") =>
+  value.replaceAll("_", " ").replace(/\b\w/g, (char) => char.toUpperCase());
+
+const shortDate = (value) => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+};
+
+const ChartPanel = ({ title, children }) => (
+  <section className="rounded-lg border border-surface-a30 bg-white p-4 shadow-sm">
+    <h2 className="mb-4 text-sm font-bold text-dark-a0">{title}</h2>
+    <div className="h-72">{children}</div>
+  </section>
+);
+
+const renderSliceLabel = ({
+  cx,
+  cy,
+  midAngle,
+  innerRadius,
+  outerRadius,
+  name,
+  payload,
+  value,
+  activeName,
+}) => {
+  if (!value) return null;
+
+  const radius = innerRadius + (outerRadius - innerRadius) * 0.55;
+  const x = cx + radius * Math.cos((-midAngle * Math.PI) / 180);
+  const y = cy + radius * Math.sin((-midAngle * Math.PI) / 180);
+  const sliceName = name || payload?.name;
+  const isActive = activeName === sliceName;
+  const isDimmed = activeName && !isActive;
+
+  return (
+    <text
+      x={x}
+      y={y}
+      fill="#ffffff"
+      textAnchor="middle"
+      dominantBaseline="central"
+      fontSize={isActive ? 16 : 13}
+      fontWeight={isActive ? 800 : 700}
+      opacity={isDimmed ? 0.45 : 1}
+    >
+      {value}
+    </text>
+  );
+};
+
+const ClickableLegend = ({ payload = [], activeName, onSelect }) => (
+  <ul className="mt-2 flex flex-wrap justify-center gap-x-4 gap-y-2 text-xs">
+    {payload.map((entry) => {
+      const isActive = activeName === entry.value;
+      const isDimmed = activeName && !isActive;
+      const value = entry.payload?.value;
+
+      return (
+        <li key={entry.value}>
+          <button
+            type="button"
+            onClick={() => onSelect(isActive ? null : entry.value)}
+            className={`inline-flex items-center gap-1.5 rounded px-2 py-1 font-medium transition ${
+              isActive ? "bg-surface-a20 text-dark-a0" : "text-dark-a0/65 hover:bg-surface-a10"
+            } ${isDimmed ? "opacity-45" : ""}`}
+          >
+            <span className="size-2.5 rounded-full" style={{ backgroundColor: entry.color }} />
+            <span>{entry.value}</span>
+            {value !== undefined && <span className="font-bold">({value})</span>}
+          </button>
+        </li>
+      );
+    })}
+  </ul>
+);
+
+const InteractivePieChart = ({
+  data,
+  colors,
+  activeName,
+  onActiveNameChange,
+  innerRadius = 0,
+  outerRadius = 90,
+}) => (
+  <ResponsiveContainer width="100%" height="100%">
+    <PieChart>
+      <Pie
+        data={data}
+        dataKey="value"
+        nameKey="name"
+        innerRadius={innerRadius}
+        outerRadius={outerRadius}
+        label={(props) => renderSliceLabel({ ...props, activeName })}
+        labelLine={false}
+      >
+        {data.map((entry, index) => {
+          const isActive = activeName === entry.name;
+          const isDimmed = activeName && !isActive;
+          const fill =
+            typeof colors === "function" ? colors(entry, index) : colors[index % colors.length];
+
+          return (
+            <Cell
+              key={entry.name}
+              fill={fill}
+              fillOpacity={isDimmed ? 0.3 : 1}
+              stroke={isActive ? "#000000" : "#ffffff"}
+              strokeWidth={isActive ? 3 : 1}
+            />
+          );
+        })}
+      </Pie>
+      <Tooltip />
+      <Legend
+        content={(props) => (
+          <ClickableLegend
+            payload={props.payload}
+            activeName={activeName}
+            onSelect={onActiveNameChange}
+          />
+        )}
+      />
+    </PieChart>
+  </ResponsiveContainer>
+);
+
+const VitalsCard = ({ label, value, unit, Icon, iconClass }) => (
+  <div className="rounded-lg border border-surface-a30 bg-white p-4 shadow-sm">
+    <div className="flex items-center justify-between gap-3">
+      <div>
+        <p className="text-xs font-medium text-dark-a0/50">{label}</p>
+        <p className="mt-1 text-2xl font-bold text-dark-a0">
+          {value}
+          {unit && <span className="ml-1 text-sm font-medium text-dark-a0/45">{unit}</span>}
+        </p>
+      </div>
+      <Icon className={`size-7 ${iconClass}`} />
+    </div>
+  </div>
+);
+
+const Analytics = () => {
+  const [analytics, setAnalytics] = useState(FALLBACK_ANALYTICS);
+  const [summary, setSummary] = useState(null);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(null);
+  const [error, setError] = useState("");
+  const [activeTypeSlice, setActiveTypeSlice] = useState(null);
+  const [activeSeveritySlice, setActiveSeveritySlice] = useState(null);
+  const [activeGenderSlice, setActiveGenderSlice] = useState(null);
+
+  const token =
+    localStorage.getItem("token") ||
+    localStorage.getItem("access") ||
+    localStorage.getItem("access_token") ||
+    "";
+
+  const fetchAnalytics = useCallback(async () => {
+    setIsRefreshing(true);
+    setError("");
+
+    try {
+      const [analyticsResponse, statsResponse] = await Promise.all([
+        fetch("/api/analytics/"),
+        fetch("/api/dashboard/stats/"),
+      ]);
+
+      if (analyticsResponse.ok) {
+        const data = await analyticsResponse.json();
+        setAnalytics({ ...FALLBACK_ANALYTICS, ...data });
+      }
+
+      if (statsResponse.ok) {
+        setSummary(await statsResponse.json());
+      }
+
+      if (!analyticsResponse.ok && !statsResponse.ok) {
+        throw new Error("Unable to refresh analytics.");
+      }
+
+      setLastUpdated(new Date());
+    } catch {
+      setAnalytics(FALLBACK_ANALYTICS);
+      setLastUpdated(new Date());
+      setError("Showing sample analytics until the backend is available.");
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchAnalytics();
+  }, [fetchAnalytics]);
+
+  const stats = useMemo(
+    () => ({
+      totalPatients: summary?.total_patients ?? analytics.patients?.total ?? 0,
+      activePatients: summary?.active_patients ?? analytics.patients?.active ?? 0,
+      totalAlerts:
+        summary?.total_alerts_last_30_days ??
+        summary?.total_alerts ??
+        analytics.alerts?.total_last_30_days ??
+        analytics.daily_alerts?.reduce((sum, item) => sum + Number(item.count || 0), 0) ??
+        0,
+      devicesOnline: summary?.devices_online ?? analytics.devices?.online ?? 0,
+    }),
+    [analytics, summary],
+  );
+
+  const typeData = (analytics.alerts?.by_type || []).map((item) => ({
+    name: formatLabel(item.type),
+    value: item.count,
+  }));
+
+  const severityData = (analytics.alerts?.by_severity || []).map((item) => ({
+    name: formatLabel(item.severity),
+    value: item.count,
+    severity: item.severity,
+  }));
+
+  const genderData = (analytics.patients?.by_gender || []).map((item) => ({
+    name: formatLabel(item.gender),
+    value: item.count,
+  }));
+
+  const exportOptions = [
+    { label: "Export Patients CSV", url: "/api/export/patients/csv/", filename: "patients.csv" },
+    { label: "Export Patients PDF", url: "/api/export/patients/pdf/", filename: "patients.pdf" },
+    { label: "Export Alerts CSV", url: "/api/export/alerts/csv/", filename: "alerts.csv" },
+    { label: "Export Alerts PDF", url: "/api/export/alerts/pdf/", filename: "alerts.pdf" },
+  ];
+
+  const handleExport = async (url, filename) => {
+    setExportOpen(false);
+    const response = await fetch(url, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    const blob = await response.blob();
+    const link = document.createElement("a");
+    const objectUrl = URL.createObjectURL(blob);
+    link.href = objectUrl;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(objectUrl);
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div>
+          <Heading
+            title="Analytics & Reports"
+            subtitle="Patient statistics, alert trends, vitals averages and exportable reports."
+          />
+          <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-dark-a0/50">
+            <span>
+              Last updated:{" "}
+              {lastUpdated
+                ? lastUpdated.toLocaleString("en-US", {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                  })
+                : "Not refreshed yet"}
+            </span>
+            <button
+              type="button"
+              onClick={fetchAnalytics}
+              className="inline-flex items-center gap-1 font-medium text-primary-a20 hover:text-primary-a30"
+            >
+              <RefreshCw className={`size-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
+              Refresh
+            </button>
+          </div>
+        </div>
+
+        <div className="relative">
+          <Button iconLeft={Download} onClick={() => setExportOpen((prev) => !prev)}>
+            Export
+          </Button>
+          {exportOpen && (
+            <div className="absolute right-0 z-20 mt-2 w-56 overflow-hidden rounded-md border border-surface-a30 bg-white shadow-lg">
+              {exportOptions.map((option) => (
+                <button
+                  key={option.filename}
+                  type="button"
+                  onClick={() => handleExport(option.url, option.filename)}
+                  className="block w-full px-4 py-2 text-left text-sm text-dark-a0 hover:bg-surface-a10"
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {error && (
+        <div className="rounded-md border border-warning-a10 bg-warning-a20 px-4 py-3 text-sm text-warning-a0">
+          {error}
+        </div>
+      )}
+
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <DashboardCard title="Total Patients" total={stats.totalPatients} Icon={Users} />
+        <DashboardCard
+          title="Active Patients"
+          total={stats.activePatients}
+          Icon={Activity}
+          iconClass="text-success-a10"
+        />
+        <DashboardCard
+          title="Total Alerts (Last 30 Days)"
+          total={stats.totalAlerts}
+          Icon={AlertTriangle}
+          iconClass="text-warning-a10"
+        />
+        <DashboardCard
+          title="Devices Online"
+          total={stats.devicesOnline}
+          Icon={Wifi}
+          iconClass="text-primary-a20"
+        />
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-2">
+        <ChartPanel title="Daily Readings (Last 7 Days)">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={analytics.daily_readings}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e1e1e1" />
+              <XAxis dataKey="date" tickFormatter={shortDate} />
+              <YAxis />
+              <Tooltip labelFormatter={shortDate} />
+              <Bar dataKey="count" fill="#1e2ac1" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartPanel>
+
+        <ChartPanel title="Daily Alerts (Last 7 Days)">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={analytics.daily_alerts}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e1e1e1" />
+              <XAxis dataKey="date" tickFormatter={shortDate} />
+              <YAxis />
+              <Tooltip labelFormatter={shortDate} />
+              <Line
+                type="monotone"
+                dataKey="count"
+                stroke="#ef4444"
+                strokeWidth={3}
+                dot={{ r: 4 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </ChartPanel>
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-2">
+        <ChartPanel title="Alerts by Type">
+          <InteractivePieChart
+            data={typeData}
+            colors={TYPE_COLORS}
+            activeName={activeTypeSlice}
+            onActiveNameChange={setActiveTypeSlice}
+          />
+        </ChartPanel>
+
+        <ChartPanel title="Alerts by Severity">
+          <InteractivePieChart
+            data={severityData}
+            colors={(entry) => SEVERITY_COLORS[entry.severity] || "#1e2ac1"}
+            activeName={activeSeveritySlice}
+            onActiveNameChange={setActiveSeveritySlice}
+            innerRadius={58}
+            outerRadius={92}
+          />
+        </ChartPanel>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <VitalsCard
+          label="Average Heart Rate"
+          value={analytics.readings?.avg_heart_rate ?? 0}
+          unit="bpm"
+          Icon={HeartPulse}
+          iconClass="text-danger-a10"
+        />
+        <VitalsCard
+          label="Average Temperature"
+          value={analytics.readings?.avg_temperature ?? 0}
+          unit="C"
+          Icon={Thermometer}
+          iconClass="text-warning-a10"
+        />
+        <VitalsCard
+          label="Average SpO2"
+          value={analytics.readings?.avg_spo2 ?? analytics.readings?.avg_spo2_percent ?? 0}
+          unit="%"
+          Icon={Activity}
+          iconClass="text-info-a10"
+        />
+        <VitalsCard
+          label="Total Falls Today"
+          value={analytics.readings?.falls_today ?? 0}
+          Icon={AlertTriangle}
+          iconClass="text-danger-a10"
+        />
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-2">
+        <ChartPanel title="Patients by Ward">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={analytics.patients?.by_ward || []}
+              layout="vertical"
+              margin={{ left: 20 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="#e1e1e1" />
+              <XAxis type="number" />
+              <YAxis type="category" dataKey="ward" width={95} />
+              <Tooltip />
+              <Bar dataKey="count" fill="#22c55e" radius={[0, 4, 4, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartPanel>
+
+        <ChartPanel title="Patients by Gender">
+          <InteractivePieChart
+            data={genderData}
+            colors={GENDER_COLORS}
+            activeName={activeGenderSlice}
+            onActiveNameChange={setActiveGenderSlice}
+            innerRadius={58}
+            outerRadius={92}
+          />
+        </ChartPanel>
+      </div>
+    </div>
+  );
+};
+
+export default Analytics;

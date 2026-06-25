@@ -1,9 +1,19 @@
+/**
+ * src/pages/auth/Login.jsx  (REPLACE YOUR EXISTING FILE)
+ *
+ * Changes from original:
+ *  - Calls useAuth().login() instead of the fake setTimeout
+ *  - Redirects to /staff/dashboard or /admin/dashboard based on role
+ *  - Shows the real server error message (locked out, wrong password, etc.)
+ */
+
 import { Eye, EyeOff, LoaderCircle } from "lucide-react";
 import React, { useState } from "react";
 import { useNavigate } from "react-router";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useAuth } from "../../context/AuthContext";
 
 const schema = z.object({
   username: z
@@ -20,25 +30,32 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [generalError, setGeneralError] = useState("");
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm({
-    resolver: zodResolver(schema),
-  });
+  } = useForm({ resolver: zodResolver(schema) });
 
   const handleLogin = async (data) => {
     setGeneralError("");
-
     try {
-      // simulate API call
-      await new Promise((res) => setTimeout(res, 1000));
-
-      navigate("/staff/dashboard");
+      const user = await login(data.username, data.password);
+      // Redirect based on role returned by the backend
+      navigate(
+        user.role === "admin" ? "/admin/dashboard" : "/staff/dashboard",
+        {
+          replace: true,
+        },
+      );
     } catch (err) {
-      setGeneralError("Invalid username or password. Please try again.");
+      // err.response.data may contain { detail: "..." } or { non_field_errors: [...] }
+      const detail =
+        err?.response?.data?.detail ||
+        err?.response?.data?.non_field_errors?.[0] ||
+        "Invalid username or password. Please try again.";
+      setGeneralError(detail);
     }
   };
 
@@ -83,7 +100,6 @@ const Login = () => {
             <label className="block font-medium text-dark-a0/80">
               Password
             </label>
-
             <div className="relative">
               <input
                 type={showPassword ? "text" : "password"}
@@ -92,11 +108,9 @@ const Login = () => {
                 {...register("password")}
                 className={`input ${errors.password ? "input-error" : ""}`}
               />
-
-              {/* Toggle */}
               <button
                 type="button"
-                onClick={() => setShowPassword((prev) => !prev)}
+                onClick={() => setShowPassword((p) => !p)}
                 className="absolute right-2 top-1/2 -translate-y-1/2 text-dark-a0/60 hover:text-primary-a20"
               >
                 {showPassword ? (
@@ -106,7 +120,6 @@ const Login = () => {
                 )}
               </button>
             </div>
-
             {errors.password && (
               <p className="mt-1 text-xs error-text">
                 {errors.password.message}
