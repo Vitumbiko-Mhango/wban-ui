@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Annoyed,
   Bed,
@@ -12,9 +12,56 @@ import {
 } from "lucide-react";
 import useClickOutside from "../hooks/useClickOutside";
 
-const PatientDetails = ({ closeForm }) => {
+const PatientDetails = ({ closeForm, patient }) => {
   const dialogRef = useRef(null);
+  const [vitals, setVitals] = useState(null);
+  const [loadingVitals, setLoadingVitals] = useState(true);
+
   useClickOutside(dialogRef, closeForm);
+
+  // Fetch latest vitals from InfluxDB for this patient
+  useEffect(() => {
+    if (!patient?.patient_id) return;
+
+    const fetchVitals = async () => {
+      try {
+        // Extract numeric part: PT-2026-005 → 005
+        const shortId = patient.patient_id.split("-")[2];
+        const res = await fetch(
+          `http://127.0.0.1:8000/api/influx/readings/?patient_id=${shortId}&start=-24h&limit=100`,
+        );
+        const data = await res.json();
+        if (data.readings && data.readings.length > 0) {
+          // Get the most recent reading
+          setVitals(data.readings[data.readings.length - 1]);
+        }
+      } catch (err) {
+        console.error("Failed to fetch vitals:", err);
+      } finally {
+        setLoadingVitals(false);
+      }
+    };
+
+    fetchVitals();
+  }, [patient]);
+
+  if (!patient) return null;
+
+  // Handle both normalized (firstname/surname) and raw (first_name/last_name) formats
+  const fullName =
+    patient.firstname && patient.surname
+      ? `${patient.firstname} ${patient.surname}`
+      : `${patient.first_name || ""} ${patient.last_name || ""}`.trim() || "—";
+
+  const bedNumber = patient.bed || patient.bed_number || "—";
+  const ward = patient.ward || "—";
+  const condition = patient.condition || patient.status || "—";
+  const assignedDevice =
+    patient.assignedDevice || patient.assigned_device || "—";
+  const admittedDate = patient.created_at
+    ? new Date(patient.created_at).toLocaleDateString()
+    : "—";
+
   return (
     <div className="absolute z-50 inset-0 flex items-center justify-center bg-dark-a0/80">
       <div
@@ -30,13 +77,14 @@ const PatientDetails = ({ closeForm }) => {
             <X className="size-4" />
           </button>
         </div>
+
         <div className="divide-y-2 divide-dark-a0/10">
           {/* Patient Information */}
           <div className="pb-4">
             <div>
-              <h1 className="text-lg text-dark-a0 font-bold">Francis Mwale</h1>
+              <h1 className="text-lg text-dark-a0 font-bold">{fullName}</h1>
               <span className="text-dark-a0/60 text-sm">
-                PT-2026-001 • 54 yrs • Male
+                {patient.patient_id} • {patient.age} yrs • {patient.gender}
               </span>
             </div>
 
@@ -44,31 +92,44 @@ const PatientDetails = ({ closeForm }) => {
               <div className="flex items-center gap-2 text-sm text-dark-a0/60">
                 <House className="size-4 text-dark-a0/60 inline-block" />
                 <p>
-                  Ward: {""}
-                  <span className="text-dark-a0/80 font-medium">Female</span>
+                  Ward:{" "}
+                  <span className="text-dark-a0/80 font-medium">{ward}</span>
                 </p>
               </div>
               <div className="flex items-center gap-2 text-sm text-dark-a0/60">
                 <BedDouble className="size-4 text-dark-a0/60 inline-block" />
                 <p>
-                  Bed: {""}
-                  <span className="text-dark-a0/80 font-medium">12</span>
+                  Bed:{" "}
+                  <span className="text-dark-a0/80 font-medium">
+                    {bedNumber}
+                  </span>
                 </p>
               </div>
               <div className="flex items-center gap-2 text-sm text-dark-a0/60">
                 <Calendar className="size-4 text-dark-a0/60 inline-block" />
                 <p>
-                  Admitted: {""}
+                  Admitted:{" "}
                   <span className="text-dark-a0/80 font-medium">
-                    2025-12-01
+                    {admittedDate}
                   </span>
                 </p>
               </div>
               <div className="flex items-center gap-2 text-sm text-dark-a0/60">
                 <User className="size-4 text-dark-a0/60 inline-block" />
                 <p>
-                  Condition: {""}
-                  <span className="text-dark-a0/80 font-medium">Diabetes</span>
+                  Condition:{" "}
+                  <span className="text-dark-a0/80 font-medium capitalize">
+                    {condition}
+                  </span>
+                </p>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-dark-a0/60">
+                <User className="size-4 text-dark-a0/60 inline-block" />
+                <p>
+                  Device:{" "}
+                  <span className="text-dark-a0/80 font-medium">
+                    {assignedDevice}
+                  </span>
                 </p>
               </div>
             </div>
@@ -79,50 +140,62 @@ const PatientDetails = ({ closeForm }) => {
             <h2 className="text-md text-dark-a0 font-semibold mb-2">
               Current Status
             </h2>
-            {/* status container */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-              {/* Heart Rate */}
-              <div className="flex items-center gap-2">
-                <Heart className="size-4 text-primary-a20" />
-                <div className="text-dark-a0/60 text-sm flex flex-col">
-                  Heart Rate
-                  <div className="space-x-1">
-                    <span className="text-dark-a0 font-bold">72</span>
-                    <span className="text-xs">bpm</span>
+            {loadingVitals ? (
+              <p className="text-sm text-dark-a0/60">Loading vitals...</p>
+            ) : !vitals ? (
+              <p className="text-sm text-dark-a0/60">
+                No recent vitals available.
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                {/* Heart Rate */}
+                <div className="flex items-center gap-2">
+                  <Heart className="size-4 text-primary-a20" />
+                  <div className="text-dark-a0/60 text-sm flex flex-col">
+                    Heart Rate
+                    <div className="space-x-1">
+                      <span className="text-dark-a0 font-bold">
+                        {vitals.bpm ?? "—"}
+                      </span>
+                      <span className="text-xs">bpm</span>
+                    </div>
+                  </div>
+                </div>
+                {/* Temperature */}
+                <div className="flex items-center gap-2">
+                  <Thermometer className="size-4 text-primary-a20" />
+                  <div className="text-dark-a0/60 text-sm flex flex-col">
+                    Temp
+                    <div className="space-x-1">
+                      <span className="text-dark-a0 font-bold">
+                        {vitals.temp ?? "—"}
+                      </span>
+                      <span className="text-xs">°C</span>
+                    </div>
+                  </div>
+                </div>
+                {/* Falls */}
+                <div className="flex items-center gap-2">
+                  <Bed className="size-4 text-primary-a20" />
+                  <div className="text-dark-a0/60 text-sm flex flex-col">
+                    Falls
+                    <span className="text-dark-a0 font-bold">
+                      {vitals.fall > 0 ? "Detected" : "Not detected"}
+                    </span>
+                  </div>
+                </div>
+                {/* Stress */}
+                <div className="flex items-center gap-2">
+                  <Annoyed className="size-4 text-primary-a20" />
+                  <div className="text-dark-a0/60 text-sm flex flex-col">
+                    Stress
+                    <span className="text-dark-a0 font-bold">
+                      {vitals.ecg > 0.5 ? "Stressed" : "Not stressed"}
+                    </span>
                   </div>
                 </div>
               </div>
-              {/* Temperature */}
-              <div className="flex items-center gap-2">
-                <Thermometer className="size-4 text-primary-a20" />
-                <div className="text-dark-a0/60 text-sm flex flex-col">
-                  Temp
-                  <div className="space-x-1">
-                    <span className="text-dark-a0 font-bold">37</span>
-                    <span className="text-xs">°C</span>
-                  </div>
-                </div>
-              </div>
-              {/* Falls */}
-              <div className="flex items-center gap-2">
-                <Bed className="size-4 text-primary-a20" />
-                <div className="text-dark-a0/60 text-sm flex flex-col">
-                  Falls
-                  <div className="space-x-1">
-                    <span className="text-dark-a0 font-bold">Not detected</span>
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Annoyed className="size-4 text-primary-a20" />
-                <div className="text-dark-a0/60 text-sm flex flex-col">
-                  Stress
-                  <div className="space-x-1">
-                    <span className="text-dark-a0 font-bold">Not stressed</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+            )}
           </div>
 
           {/* Clinical Notes */}
@@ -132,9 +205,9 @@ const PatientDetails = ({ closeForm }) => {
             </h2>
             <div className="bg-surface-a10 p-4 rounded-lg text-sm text-dark-a0/80">
               <p>
-                Patient is stable with no signs of distress. Vital signs are
-                within normal limits. No falls detected in the last 24 hours.
-                Continue monitoring and provide regular care.
+                {patient.discharge_notes ||
+                  patient.notes ||
+                  "No clinical notes available."}
               </p>
             </div>
           </div>

@@ -1,5 +1,5 @@
 import { X } from "lucide-react";
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Button from "./common/Button";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -25,6 +25,8 @@ const schema = z.object({
 const PatientForm = ({ closeForm, onSubmit, patient }) => {
   const isEdit = !!patient;
   const formRef = useRef(null);
+  const [availableDevices, setAvailableDevices] = useState([]);
+  const [loadingDevices, setLoadingDevices] = useState(true);
 
   useClickOutside(formRef, closeForm);
 
@@ -43,12 +45,41 @@ const PatientForm = ({ closeForm, onSubmit, patient }) => {
       gender: "male",
       ward: "",
       bed: "",
-      device: "ESP32-A1",
+      device: "",
       condition: "",
       status: "normal",
       notes: "",
     },
   });
+
+  // Fetch available devices from backend
+  useEffect(() => {
+    const fetchDevices = async () => {
+      try {
+        const token = localStorage.getItem("access_token");
+        const res = await fetch("http://127.0.0.1:8000/api/devices/", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+        const data = await res.json();
+        // Filter only unassigned devices (not paired to any patient)
+        // unless editing — include current patient's device too
+        const devices = data.results || data;
+        const filtered = devices.filter(
+          (d) => !d.is_paired || (isEdit && d.device_id === patient?.device),
+        );
+        setAvailableDevices(filtered);
+      } catch (err) {
+        console.error("Failed to fetch devices:", err);
+      } finally {
+        setLoadingDevices(false);
+      }
+    };
+
+    fetchDevices();
+  }, [isEdit, patient]);
 
   useEffect(() => {
     if (patient) {
@@ -164,13 +195,24 @@ const PatientForm = ({ closeForm, onSubmit, patient }) => {
           <div className="space-y-2 md:space-y-0 md:flex gap-4">
             <div className="w-full">
               <label className="label">Device</label>
-              <select {...register("device")} className="input">
-                <option>ESP32-A1</option>
-                <option>ESP32-A2</option>
-                <option>ESP32-A3</option>
-                <option>ESP32-A4</option>
-                <option>ESP32-A5</option>
-              </select>
+              {loadingDevices ? (
+                <select className="input" disabled>
+                  <option>Loading devices...</option>
+                </select>
+              ) : (
+                <select {...register("device")} className="input">
+                  <option value="">-- Select Device --</option>
+                  {availableDevices.length === 0 ? (
+                    <option disabled>No devices available</option>
+                  ) : (
+                    availableDevices.map((d) => (
+                      <option key={d.device_id} value={d.device_id}>
+                        {d.device_id} — {d.name}
+                      </option>
+                    ))
+                  )}
+                </select>
+              )}
             </div>
 
             <div className="w-full">
