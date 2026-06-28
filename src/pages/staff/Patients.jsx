@@ -18,6 +18,36 @@ import PatientForm from "../../components/PatientForm";
 import PatientDetails from "../../components/PatientDetails";
 import client from "../../api/client";
 
+const getAssignedDeviceId = (patient) => {
+  const assigned = patient.assigned_device || patient.device;
+  if (typeof assigned === "string") return assigned;
+  return assigned?.device_id || patient.device_id || "";
+};
+
+const getAssignedDeviceName = (patient) => {
+  const assigned = patient.assigned_device || patient.device;
+  if (typeof assigned === "object" && assigned !== null) {
+    return assigned.name || assigned.device_name || "";
+  }
+  return patient.device_name || "";
+};
+
+const isDeviceAssigned = (device) =>
+  Boolean(
+    device?.patient ||
+      device?.assigned_patient ||
+      device?.patient_id ||
+      device?.is_paired,
+  );
+
+const getAssignedPatientId = (device) => {
+  const assigned = device?.assigned_patient || device?.patient;
+  if (typeof assigned === "object" && assigned !== null) {
+    return assigned.id || assigned.patient_id || null;
+  }
+  return device?.patient_id || assigned || null;
+};
+
 // Map backend field names → what PatientForm expects
 const normalizePatient = (p) => ({
   id: p.id,
@@ -28,7 +58,8 @@ const normalizePatient = (p) => ({
   gender: p.gender,
   ward: p.ward,
   bed: p.bed_number,
-  assignedDevice: p.assigned_device || "",
+  assignedDevice: getAssignedDeviceId(p),
+  deviceName: getAssignedDeviceName(p),
   status: p.condition, // stable / warning / critical
   condition: p.condition,
 });
@@ -59,18 +90,76 @@ const Patients = () => {
     fetchPatients();
   }, [fetchPatients]);
 
+  const getDeviceByDeviceId = async (deviceId) => {
+    const { data } = await client.get("/devices/");
+    const list = data?.results ?? data ?? [];
+    return list.find((device) => device.device_id === deviceId);
+  };
+
+  const assertDeviceAssignable = async (deviceId, patientId) => {
+    if (!deviceId) return null;
+
+    const device = await getDeviceByDeviceId(deviceId);
+    if (!device) {
+      throw new Error(`${deviceId} is not a registered device_id.`);
+    }
+
+    const assignedPatientId = getAssignedPatientId(device);
+    if (
+      isDeviceAssigned(device) &&
+      (!patientId || String(assignedPatientId) !== String(patientId))
+    ) {
+      throw new Error(`${deviceId} is already assigned to another patient.`);
+    }
+
+    return device;
+  };
+
+  // ── Helper: pair or unpair device after saving patient ───────────────────────
+  const syncDevice = async (patientId, newDeviceId, oldDeviceId) => {
+    if (newDeviceId === oldDeviceId) return;
+
+    const newDevice = newDeviceId
+      ? await assertDeviceAssignable(newDeviceId, patientId)
+      : null;
+
+    if (oldDeviceId) {
+      try {
+        const { data: devices } = await client.get(
+          `/devices/?patient=${patientId}`,
+        );
+        const list = devices?.results ?? devices ?? [];
+        const old = list.find((d) => d.device_id === oldDeviceId);
+        if (old) await client.post(`/devices/${old.id}/unpair/`);
+      } catch {
+        /* ignore */
+      }
+    }
+
+    if (newDevice) {
+      await client.post(`/devices/${newDevice.id}/pair/`, {
+        patient_id: patientId,
+      });
+    }
+  };
+
   // ── Add ──────────────────────────────────────────────────────────────────────
   const handleAdd = async (formData) => {
-    await client.post("/patients/", {
+    await assertDeviceAssignable(formData.device_id, null);
+
+    const { data: patient } = await client.post("/patients/", {
       first_name: formData.firstname,
       last_name: formData.surname,
       age: formData.age,
       gender: formData.gender,
       ward: formData.ward,
       bed_number: formData.bed,
-      assigned_device: formData.device || "",
       condition: formData.status,
     });
+    // Pair the selected device to the new patient via the pair endpoint
+    if (formData.device_id) {
+      await syncDevice(patient.id, formData.device_id, null);
+    }
     setOpenForm(false);
     fetchPatients();
   };
@@ -84,9 +173,14 @@ const Patients = () => {
       gender: formData.gender,
       ward: formData.ward,
       bed_number: formData.bed,
-      assigned_device: formData.device || "",
       condition: formData.status,
     });
+    // Sync device pairing — unpair old, pair new
+    await syncDevice(
+      selectedPatient.id,
+      formData.device_id,
+      selectedPatient.assignedDevice,
+    );
     setEditForm(false);
     setSelectedPatient(null);
     fetchPatients();
@@ -133,7 +227,7 @@ const Patients = () => {
           "Patient Name",
           "Ward",
           "Bed",
-          "Assigned Device",
+          "device_id",
           "Status",
           "Actions",
         ]}

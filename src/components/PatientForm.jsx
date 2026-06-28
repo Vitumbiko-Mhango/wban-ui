@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import useClickOutside from "../hooks/useClickOutside";
+import client from "../api/client";
 
 const schema = z.object({
   firstname: z.string().min(2, "Firstname is required"),
@@ -16,17 +17,28 @@ const schema = z.object({
   gender: z.string(),
   ward: z.string().min(1, "Ward is required"),
   bed: z.string().min(1, "Bed is required"),
-  device: z.string(),
+  device_id: z.string().optional(),
+  device_name: z.string().optional(),
   condition: z.string().min(2, "Condition is required"),
   status: z.string(),
   notes: z.string().optional(),
 });
 
+const getDeviceName = (device) => device?.name || device?.device_name || "";
+const isDeviceAssigned = (device) =>
+  Boolean(
+    device?.patient ||
+      device?.assigned_patient ||
+      device?.patient_id ||
+      device?.is_paired,
+  );
+
 const PatientForm = ({ closeForm, onSubmit, patient }) => {
   const isEdit = !!patient;
   const formRef = useRef(null);
-  const [availableDevices, setAvailableDevices] = useState([]);
-  const [loadingDevices, setLoadingDevices] = useState(true);
+  const [devices, setDevices] = useState([]);
+  const [devicesLoading, setDevicesLoading] = useState(true);
+  const [submitError, setSubmitError] = useState("");
 
   useClickOutside(formRef, closeForm);
 
@@ -35,6 +47,8 @@ const PatientForm = ({ closeForm, onSubmit, patient }) => {
     handleSubmit,
     reset,
     setFocus,
+    setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(schema),
@@ -45,55 +59,80 @@ const PatientForm = ({ closeForm, onSubmit, patient }) => {
       gender: "male",
       ward: "",
       bed: "",
-      device: "",
+      device_id: "",
+      device_name: "",
       condition: "",
-      status: "normal",
+      status: "stable",
       notes: "",
     },
   });
 
-  // Fetch available devices from backend
+  const selectedDeviceId = watch("device_id");
+  const selectedDevice = devices.find((d) => d.device_id === selectedDeviceId);
+
   useEffect(() => {
     const fetchDevices = async () => {
       try {
-        const token = localStorage.getItem("access_token");
-        const res = await fetch("http://127.0.0.1:8000/api/devices/", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        });
-        const data = await res.json();
-        // Filter only unassigned devices (not paired to any patient)
-        // unless editing — include current patient's device too
-        const devices = data.results || data;
-        const filtered = devices.filter(
-          (d) => !d.is_paired || (isEdit && d.device_id === patient?.device),
+        const { data } = await client.get("/devices/");
+        const list = data?.results ?? data ?? [];
+        const available = list.filter(
+          (device) =>
+            device.device_id &&
+            (!isDeviceAssigned(device) ||
+              device.device_id === patient?.assignedDevice),
         );
-        setAvailableDevices(filtered);
-      } catch (err) {
-        console.error("Failed to fetch devices:", err);
+        setDevices(available);
+      } catch {
+        setDevices([]);
       } finally {
-        setLoadingDevices(false);
+        setDevicesLoading(false);
       }
     };
 
     fetchDevices();
-  }, [isEdit, patient]);
+  }, [patient]);
 
   useEffect(() => {
-    if (patient) {
-      reset({ ...patient });
-    }
+    if (!patient) return;
+
+    reset({
+      firstname: patient.firstname || "",
+      surname: patient.surname || "",
+      age: patient.age || "",
+      gender: patient.gender || "male",
+      ward: patient.ward || "",
+      bed: patient.bed || "",
+      device_id: patient.assignedDevice || "",
+      device_name: patient.deviceName || "",
+      condition: patient.condition || "",
+      status: patient.status || "stable",
+      notes: patient.notes || "",
+    });
   }, [patient, reset]);
 
-  const onError = (errors) => {
-    const firstField = Object.keys(errors)[0];
+  useEffect(() => {
+    setValue("device_name", getDeviceName(selectedDevice), {
+      shouldDirty: false,
+      shouldValidate: false,
+    });
+  }, [selectedDevice, setValue]);
+
+  const onError = (formErrors) => {
+    const firstField = Object.keys(formErrors)[0];
     if (firstField) setFocus(firstField);
   };
 
   const submitHandler = async (data) => {
-    await onSubmit(data);
+    setSubmitError("");
+    try {
+      await onSubmit(data);
+    } catch (err) {
+      setSubmitError(
+        err?.response?.data?.detail ||
+          err?.message ||
+          "Unable to save patient.",
+      );
+    }
   };
 
   return (
@@ -103,7 +142,6 @@ const PatientForm = ({ closeForm, onSubmit, patient }) => {
         onSubmit={handleSubmit(submitHandler, onError)}
         className="relative bg-light-a0 p-6 rounded-lg max-w-2xl max-h-[90vh] overflow-y-auto w-full m-4"
       >
-        {/* Close */}
         <div className="absolute right-6">
           <X
             onClick={closeForm}
@@ -111,7 +149,6 @@ const PatientForm = ({ closeForm, onSubmit, patient }) => {
           />
         </div>
 
-        {/* Header */}
         <div>
           <h3 className="text-lg font-bold text-dark-a0">
             {isEdit ? "Edit Patient" : "Add New Patient"}
@@ -122,7 +159,6 @@ const PatientForm = ({ closeForm, onSubmit, patient }) => {
         </div>
 
         <div className="space-y-4 mt-6">
-          {/* Names */}
           <div className="space-y-2 md:space-y-0 md:flex gap-4">
             <div className="w-full">
               <label className="label">Firstname</label>
@@ -134,7 +170,6 @@ const PatientForm = ({ closeForm, onSubmit, patient }) => {
                 <p className="error-text">{errors.firstname.message}</p>
               )}
             </div>
-
             <div className="w-full">
               <label className="label">Surname</label>
               <input
@@ -147,7 +182,6 @@ const PatientForm = ({ closeForm, onSubmit, patient }) => {
             </div>
           </div>
 
-          {/* Age & Gender */}
           <div className="space-y-2 md:space-y-0 md:flex gap-4">
             <div className="w-full">
               <label className="label">Age</label>
@@ -158,7 +192,6 @@ const PatientForm = ({ closeForm, onSubmit, patient }) => {
               />
               {errors.age && <p className="error-text">{errors.age.message}</p>}
             </div>
-
             <div className="w-full">
               <label className="label">Gender</label>
               <select {...register("gender")} className="input">
@@ -168,7 +201,6 @@ const PatientForm = ({ closeForm, onSubmit, patient }) => {
             </div>
           </div>
 
-          {/* Ward & Bed */}
           <div className="space-y-2 md:space-y-0 md:flex gap-4">
             <div className="w-full">
               <label className="label">Ward</label>
@@ -180,7 +212,6 @@ const PatientForm = ({ closeForm, onSubmit, patient }) => {
                 <p className="error-text">{errors.ward.message}</p>
               )}
             </div>
-
             <div className="w-full">
               <label className="label">Bed</label>
               <input
@@ -191,60 +222,88 @@ const PatientForm = ({ closeForm, onSubmit, patient }) => {
             </div>
           </div>
 
-          {/* Device & Condition */}
           <div className="space-y-2 md:space-y-0 md:flex gap-4">
             <div className="w-full">
-              <label className="label">Device</label>
-              {loadingDevices ? (
-                <select className="input" disabled>
-                  <option>Loading devices...</option>
-                </select>
-              ) : (
-                <select {...register("device")} className="input">
-                  <option value="">-- Select Device --</option>
-                  {availableDevices.length === 0 ? (
-                    <option disabled>No devices available</option>
-                  ) : (
-                    availableDevices.map((d) => (
-                      <option key={d.device_id} value={d.device_id}>
-                        {d.device_id} — {d.name}
-                      </option>
-                    ))
-                  )}
-                </select>
+              <label className="label">
+                device_id
+                <span className="ml-1 font-normal text-dark-a0/40 text-xs">
+                  (optional)
+                </span>
+              </label>
+              <select
+                {...register("device_id")}
+                className="input"
+                disabled={devicesLoading}
+              >
+                <option value="">
+                  {devicesLoading ? "Loading devices..." : "No device"}
+                </option>
+                {devices.map((device) => (
+                  <option key={device.device_id} value={device.device_id}>
+                    {device.device_id}
+                  </option>
+                ))}
+              </select>
+              {devices.length === 0 && !devicesLoading && (
+                <p className="mt-1 text-xs text-dark-a0/40">
+                  No available registered devices. Register a device first in
+                  Admin / Devices.
+                </p>
               )}
             </div>
 
             <div className="w-full">
-              <label className="label">Condition</label>
+              <label className="label">
+                Device Name
+                <span className="ml-1 font-normal text-dark-a0/40 text-xs">
+                  (optional)
+                </span>
+              </label>
               <input
-                {...register("condition")}
-                className={`input ${errors.condition ? "input-error" : ""}`}
+                {...register("device_name")}
+                readOnly
+                placeholder="No device selected"
+                className="input"
               />
-              {errors.condition && (
-                <p className="error-text">{errors.condition.message}</p>
-              )}
             </div>
           </div>
 
-          {/* Status */}
+          <div>
+            <label className="label">Condition</label>
+            <input
+              {...register("condition")}
+              placeholder="e.g. Hypertension"
+              className={`input ${errors.condition ? "input-error" : ""}`}
+            />
+            {errors.condition && (
+              <p className="error-text">{errors.condition.message}</p>
+            )}
+          </div>
+
           <div>
             <label className="label">Status</label>
             <select {...register("status")} className="input">
-              <option value="normal">Normal</option>
+              <option value="stable">Stable</option>
               <option value="warning">Warning</option>
               <option value="critical">Critical</option>
             </select>
           </div>
 
-          {/* Notes */}
           <div>
             <label className="label">Clinical Notes</label>
-            <textarea {...register("notes")} className="input resize-none" />
+            <textarea
+              {...register("notes")}
+              rows={3}
+              className="input resize-none"
+            />
           </div>
 
-          {/* Buttons */}
           <div className="flex justify-end gap-4">
+            {submitError && (
+              <p className="mr-auto self-center text-sm text-danger-a0">
+                {submitError}
+              </p>
+            )}
             <Button type="button" variant="secondary" onClick={closeForm}>
               Cancel
             </Button>

@@ -11,6 +11,7 @@ import {
   X,
 } from "lucide-react";
 import useClickOutside from "../hooks/useClickOutside";
+import client from "../api/client";
 
 const PatientDetails = ({ closeForm, patient }) => {
   const dialogRef = useRef(null);
@@ -26,11 +27,11 @@ const PatientDetails = ({ closeForm, patient }) => {
     const fetchVitals = async () => {
       try {
         // Extract numeric part: PT-2026-005 → 005
-        const shortId = patient.patient_id.split("-")[2];
-        const res = await fetch(
-          `http://127.0.0.1:8000/api/influx/readings/?patient_id=${shortId}&start=-24h&limit=100`,
+        // const shortId = patient.patient_id;
+        const res = await client.get(
+          `/influx/readings/?patient_id=${patient.patient_id}&start=-24h&limit=100`,
         );
-        const data = await res.json();
+        const data = res.data;
         if (data.readings && data.readings.length > 0) {
           // Get the most recent reading
           setVitals(data.readings[data.readings.length - 1]);
@@ -155,7 +156,7 @@ const PatientDetails = ({ closeForm, patient }) => {
                     Heart Rate
                     <div className="space-x-1">
                       <span className="text-dark-a0 font-bold">
-                        {vitals.bpm ?? "—"}
+                        {vitals.heart_rate ?? "—"}
                       </span>
                       <span className="text-xs">bpm</span>
                     </div>
@@ -168,7 +169,7 @@ const PatientDetails = ({ closeForm, patient }) => {
                     Temp
                     <div className="space-x-1">
                       <span className="text-dark-a0 font-bold">
-                        {vitals.temp ?? "—"}
+                        {vitals.temperature ?? "—"}
                       </span>
                       <span className="text-xs">°C</span>
                     </div>
@@ -180,7 +181,7 @@ const PatientDetails = ({ closeForm, patient }) => {
                   <div className="text-dark-a0/60 text-sm flex flex-col">
                     Falls
                     <span className="text-dark-a0 font-bold">
-                      {vitals.fall > 0 ? "Detected" : "Not detected"}
+                      {vitals.fall_detected > 0 ? "Detected" : "Not detected"}
                     </span>
                   </div>
                 </div>
@@ -190,7 +191,7 @@ const PatientDetails = ({ closeForm, patient }) => {
                   <div className="text-dark-a0/60 text-sm flex flex-col">
                     Stress
                     <span className="text-dark-a0 font-bold">
-                      {vitals.ecg > 0.5 ? "Stressed" : "Not stressed"}
+                      {vitals.stress_index > 0.5 ? "Stressed" : "Not stressed"}
                     </span>
                   </div>
                 </div>

@@ -26,6 +26,7 @@ import GeneralTable from "../../components/common/GeneralTable";
 import Heading from "../../components/common/Heading";
 import useClickOutside from "../../hooks/useClickOutside";
 import client from "../../api/client";
+import { formatDate } from "../../utils/DateFormatter";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const getDeviceName = (d) => d.name || d.device_name || "Unnamed device";
@@ -39,7 +40,7 @@ const getAssignedName = (d) => {
   return p.name || p.full_name || "Assigned patient";
 };
 const isPaired = (d) =>
-  Boolean(d.assigned_patient || d.patient || d.patient_id);
+  Boolean(d.assigned_patient || d.patient || d.patient_id || d.is_paired);
 const patientHasDevice = (p) =>
   Boolean(p.device || p.assigned_device || p.device_id);
 const normalizeList = (data, fallback) =>
@@ -159,7 +160,7 @@ const RegisterDeviceModal = ({ onClose, onRegistered }) => {
     setSubmit(true);
     try {
       const { data } = await client.post("/devices/", {
-        device_id: form.device_id.trim(),
+        device_id: form.device_id.trim().toLowerCase(),
         name: form.name.trim(),
         firmware_version: form.firmware_version.trim(),
       });
@@ -217,18 +218,22 @@ const RegisterDeviceModal = ({ onClose, onRegistered }) => {
             <input
               required
               value={form.device_id}
-              onChange={(e) => set("device_id", e.target.value)}
-              placeholder="ESP32-001"
+              onChange={(e) => set("device_id", e.target.value.toLowerCase())}
+              pattern="[a-z0-9]+(_[a-z0-9]+)*"
+              title="Use lowercase letters, numbers, and hyphens, for example esp32-001."
+              placeholder="esp32_001"
               className="input"
             />
           </div>
           <div>
-            <label className="label">Device Name</label>
+            <label className="label">
+              Device Name{" "}
+              <span className="font-normal text-dark-a0/40">(optional)</span>
+            </label>
             <input
-              required
               value={form.name}
               onChange={(e) => set("name", e.target.value)}
-              placeholder="Bedside Monitor A"
+              placeholder="Esp32"
               className="input"
             />
           </div>
@@ -489,7 +494,7 @@ const Devices = () => {
           <BatteryBar value={device.battery_level} />
         </td>
         <td className="border border-surface-a30 px-6 py-4 whitespace-nowrap text-dark-a0/65">
-          {device.last_seen || "Not seen yet"}
+          {formatDate(device.last_seen) || "Not seen yet"}
         </td>
         <td className="border border-surface-a30 px-6 py-4 whitespace-nowrap text-dark-a0/65">
           {getFirmware(device)}
