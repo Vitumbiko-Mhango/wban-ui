@@ -24,6 +24,8 @@ import ShiftHandover from "./pages/staff/ShiftHandover";
 import WardTransfer from "./pages/staff/WardTransfer";
 import NEWS2 from "./pages/staff/NEWS2";
 
+import AlertThresholds from "./pages/staff/AlertThresholds";
+
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import Users from "./pages/admin/Users";
@@ -52,6 +54,7 @@ const App = () => {
               <Route path="handover" element={<ShiftHandover />} />
               <Route path="ward-transfer" element={<WardTransfer />} />
               <Route path="news2" element={<NEWS2 />} />
+              <Route path="thresholds" element={<AlertThresholds />} />
               <Route path="analytics" element={<Analytics />} />
             </Route>
           </Route>

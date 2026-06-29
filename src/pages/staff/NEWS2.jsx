@@ -299,9 +299,14 @@ const CalculateModal = ({
     consciousness: "alert",
     on_oxygen: false,
     notes: "",
+    // manual vitals — revealed when device has no data
+    heart_rate: "",
+    temperature: "",
+    spo2: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [needManualVitals, setNeedManualVitals] = useState(false);
 
   const set = (field, value) =>
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -312,6 +317,15 @@ const CalculateModal = ({
 
     if (!form.patient) {
       setError("Please select a patient.");
+      return;
+    }
+
+    // If manual vitals are required, validate them before sending
+    if (
+      needManualVitals &&
+      (!form.heart_rate || !form.temperature || !form.spo2)
+    ) {
+      setError("Please enter heart rate, temperature, and SpO₂.");
       return;
     }
 
@@ -326,15 +340,35 @@ const CalculateModal = ({
         notes: form.notes.trim(),
       };
 
+      // Include manual vitals if the nurse filled them in
+      if (needManualVitals) {
+        payload.heart_rate = Number(form.heart_rate);
+        payload.temperature = Number(form.temperature);
+        payload.spo2 = Number(form.spo2);
+      }
+
       const { data } = await client.post("/news2/", payload);
       onCalculated(normalizeScore(data));
       onClose();
     } catch (err) {
-      const detail =
-        err?.response?.data?.detail ||
-        err?.response?.data?.non_field_errors?.[0] ||
+      const respData = err?.response?.data;
+
+      // Backend signals no device data — reveal the manual vital fields
+      if (respData?.error === "no_device_data") {
+        setNeedManualVitals(true);
+        setError(
+          "No sensor readings found for this patient. Please enter heart rate, temperature, and SpO₂ manually below.",
+        );
+        setIsSubmitting(false);
+        return;
+      }
+
+      const msg =
+        respData?.message ||
+        respData?.error ||
+        respData?.detail ||
         "Failed to calculate. Check your connection and try again.";
-      setError(detail);
+      setError(msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -359,8 +393,8 @@ const CalculateModal = ({
           Calculate NEWS2 Score
         </h3>
         <p className="text-sm text-dark-a0/60">
-          Enter manually measured values — heart rate, temperature and SpO₂ are
-          auto-filled from the latest sensor reading.
+          Enter manually measured values. Heart rate, temperature, and SpO₂ are
+          pulled from the patient's device automatically.
         </p>
 
         <div className="mt-6 space-y-4">
@@ -369,13 +403,13 @@ const CalculateModal = ({
             patients={patients}
             loading={patientsLoading}
             value={form.patient}
-            onChange={(v) => set("patient", v)}
+            onChange={(v) => {
+              set("patient", v);
+              setNeedManualVitals(false);
+              setError("");
+            }}
             error={!form.patient && error ? "Please select a patient." : ""}
           />
-
-          <div className="rounded-md bg-surface-a10 px-3 py-2 text-xs font-bold uppercase text-dark-a0/50">
-            Manually entered
-          </div>
 
           <div className="grid gap-4 md:grid-cols-2">
             <div>
@@ -452,7 +486,60 @@ const CalculateModal = ({
             />
           </div>
 
-          {error && <p className="error-text">{error}</p>}
+          {/* Manual vitals — revealed when device has no readings */}
+          {needManualVitals && (
+            <div className="rounded-md border border-warning-a10/40 bg-warning-a20 p-4 space-y-3">
+              <p className="text-xs font-bold uppercase text-warning-a0">
+                Enter vitals manually
+              </p>
+              <div className="grid gap-3 md:grid-cols-3">
+                <div>
+                  <label className="label">Heart rate</label>
+                  <input
+                    required
+                    min="1"
+                    type="number"
+                    value={form.heart_rate}
+                    onChange={(e) => set("heart_rate", e.target.value)}
+                    placeholder="bpm"
+                    className="input"
+                  />
+                </div>
+                <div>
+                  <label className="label">Temperature</label>
+                  <input
+                    required
+                    type="number"
+                    step="0.1"
+                    value={form.temperature}
+                    onChange={(e) => set("temperature", e.target.value)}
+                    placeholder="°C"
+                    className="input"
+                  />
+                </div>
+                <div>
+                  <label className="label">SpO₂</label>
+                  <input
+                    required
+                    min="0"
+                    max="100"
+                    type="number"
+                    value={form.spo2}
+                    onChange={(e) => set("spo2", e.target.value)}
+                    placeholder="%"
+                    className="input"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {error && (
+            <div className="flex items-start gap-2 rounded-md border border-danger-a10/40 bg-danger-a20 px-3 py-2">
+              <AlertTriangle className="size-4 text-danger-a10 shrink-0 mt-0.5" />
+              <p className="text-sm text-danger-a0">{error}</p>
+            </div>
+          )}
 
           <div className="flex justify-end gap-3 pt-2">
             <Button type="button" variant="secondary" onClick={onClose}>
