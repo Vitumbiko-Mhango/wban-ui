@@ -26,7 +26,7 @@ const FILTERS = ["all", "critical", "warning", "normal"];
 const normalize = (a) => ({
   id: a.id,
   patient: a.patient_name ?? `Patient ${a.patient}`,
-  ward: a.ward ?? "",
+  ward: a.patient_ward ?? a.ward ?? "",
   severity: a.is_resolved ? "resolved" : a.severity,
   message: a.message,
   time: new Date(a.created_at).toLocaleTimeString(),

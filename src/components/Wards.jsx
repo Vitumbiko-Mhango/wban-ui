@@ -1,260 +1,244 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import client from "../api/client";
 
-// ─── Constants ───────────────────────────────────────────────────────────────
-
-const TOTAL_BEDS = 10; // 2 columns × 10 rows
-const COLUMNS = 2;
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const CONDITION_CONFIG = {
-  stable: { bg: "#16a34a", label: "Stable" },
-  warning: { bg: "#f59e0b", label: "Warning" },
-  critical: { bg: "#dc2626", label: "Critical" },
+  stable: { dot: "#16a34a", fill: "#dcfce7", text: "#166534", label: "Stable" },
+  warning: {
+    dot: "#ca8a04",
+    fill: "#fef9c3",
+    text: "#854d0e",
+    label: "Warning",
+  },
+  critical: {
+    dot: "#dc2626",
+    fill: "#fee2e2",
+    text: "#991b1b",
+    label: "Critical",
+  },
 };
 
-// ─── Sample Data (Ward C only) ────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const SAMPLE_PATIENTS = [
-  {
-    patient_id: "PT-2026-020",
-    first_name: "Mary",
-    last_name: "Kachingwe",
-    age: 36,
-    gender: "female",
-    ward: "Ward C",
-    bed_number: "1",
-    condition: "stable",
-    assigned_device: "ESP32-018",
-    is_discharged: false,
-    is_archived: false,
-  },
-  {
-    patient_id: "PT-2026-021",
-    first_name: "David",
-    last_name: "Mwanza",
-    age: 60,
-    gender: "male",
-    ward: "Ward C",
-    bed_number: "3",
-    condition: "critical",
-    assigned_device: "ESP32-019",
-    is_discharged: false,
-    is_archived: false,
-  },
-  {
-    patient_id: "PT-2026-022",
-    first_name: "Beatrice",
-    last_name: "Nkhata",
-    age: 44,
-    gender: "female",
-    ward: "Ward C",
-    bed_number: "5",
-    condition: "warning",
-    assigned_device: "ESP32-020",
-    is_discharged: false,
-    is_archived: false,
-  },
-  {
-    patient_id: "PT-2026-023",
-    first_name: "Henry",
-    last_name: "Singini",
-    age: 31,
-    gender: "male",
-    ward: "Ward C",
-    bed_number: "7",
-    condition: "stable",
-    assigned_device: "",
-    is_discharged: false,
-    is_archived: false,
-  },
-  {
-    patient_id: "PT-2026-024",
-    first_name: "Judith",
-    last_name: "Nankhumwa",
-    age: 52,
-    gender: "female",
-    ward: "Ward C",
-    bed_number: "9",
-    condition: "stable",
-    assigned_device: "ESP32-021",
-    is_discharged: false,
-    is_archived: false,
-  },
-  {
-    patient_id: "PT-2026-025",
-    first_name: "George",
-    last_name: "Sikelo",
-    age: 68,
-    gender: "male",
-    ward: "Ward C",
-    bed_number: "11",
-    condition: "warning",
-    assigned_device: "ESP32-022",
-    is_discharged: false,
-    is_archived: false,
-  },
-  {
-    patient_id: "PT-2026-026",
-    first_name: "Rose",
-    last_name: "Dzimadzi",
-    age: 23,
-    gender: "female",
-    ward: "Ward C",
-    bed_number: "14",
-    condition: "stable",
-    assigned_device: "ESP32-023",
-    is_discharged: false,
-    is_archived: false,
-  },
-  {
-    patient_id: "PT-2026-027",
-    first_name: "Wilson",
-    last_name: "Chienda",
-    age: 57,
-    gender: "male",
-    ward: "Ward C",
-    bed_number: "19",
-    condition: "critical",
-    assigned_device: "ESP32-024",
-    is_discharged: false,
-    is_archived: false,
-  },
-  {
-    patient_id: "PT-2026-028",
-    first_name: "Chisomo",
-    last_name: "Mwale",
-    age: 61,
-    gender: "male",
-    ward: "Ward C",
-    bed_number: "2",
-    condition: "critical",
-    assigned_device: "ESP32-003",
-    is_discharged: false,
-    is_archived: false,
-  },
-  {
-    patient_id: "PT-2026-029",
-    first_name: "Grace",
-    last_name: "Phiri",
-    age: 32,
-    gender: "female",
-    ward: "Ward C",
-    bed_number: "6",
-    condition: "warning",
-    assigned_device: "ESP32-002",
-    is_discharged: false,
-    is_archived: false,
-  },
-];
-
-const WARD_NAME = "Ward C";
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function buildBedMap(patients) {
+function groupByWard(patients) {
   const map = {};
   patients
-    .filter((p) => p.ward === WARD_NAME && !p.is_discharged && !p.is_archived)
+    .filter((p) => !p.is_discharged && !p.is_archived)
     .forEach((p) => {
-      map[String(parseInt(p.bed_number, 10))] = p;
+      const w = p.ward || "Unassigned";
+      if (!map[w]) map[w] = [];
+      map[w].push(p);
     });
   return map;
 }
 
-// ─── BedCard ─────────────────────────────────────────────────────────────────
+function buildBedMap(wardPatients) {
+  const map = {};
+  wardPatients.forEach((p) => {
+    const n = parseInt(p.bed_number, 10);
+    if (!isNaN(n)) map[String(n)] = p;
+  });
+  return map;
+}
+
+function totalBeds(bedMap) {
+  const nums = Object.keys(bedMap).map(Number);
+  const max = nums.length > 0 ? Math.max(...nums) : 0;
+  const ceil = max % 2 === 0 ? max : max + 1;
+  return Math.max(10, ceil);
+}
+
+// ─── BedSVG ───────────────────────────────────────────────────────────────────
+
+function BedSVG({ color }) {
+  const c = color || "#d1d5db";
+  return (
+    <svg
+      width="34"
+      height="26"
+      viewBox="0 0 34 26"
+      fill="none"
+      aria-hidden="true"
+      style={{ flexShrink: 0, marginTop: "2px" }}
+    >
+      <rect
+        x="1"
+        y="12"
+        width="32"
+        height="10"
+        rx="3"
+        fill={c}
+        fillOpacity="0.2"
+        stroke={c}
+        strokeWidth="1.2"
+      />
+      <rect
+        x="1"
+        y="6"
+        width="8"
+        height="7"
+        rx="2"
+        fill={c}
+        fillOpacity="0.3"
+        stroke={c}
+        strokeWidth="1.2"
+      />
+      <rect
+        x="1"
+        y="20"
+        width="4"
+        height="5"
+        rx="1.5"
+        fill={c}
+        fillOpacity="0.5"
+      />
+      <rect
+        x="29"
+        y="20"
+        width="4"
+        height="5"
+        rx="1.5"
+        fill={c}
+        fillOpacity="0.5"
+      />
+      <line
+        x1="9"
+        y1="16"
+        x2="33"
+        y2="16"
+        stroke={c}
+        strokeWidth="0.8"
+        strokeOpacity="0.45"
+      />
+    </svg>
+  );
+}
+
+// ─── BedCard ──────────────────────────────────────────────────────────────────
 
 function BedCard({ bedNumber, patient, onClick }) {
-  const condition = patient?.condition;
-  const badge = condition ? CONDITION_CONFIG[condition] : null;
+  const [hovered, setHovered] = useState(false);
+
+  if (!patient) {
+    return (
+      <div
+        style={{
+          background: "var(--surface-1, #f8fafc)",
+          border: "1.5px dashed #d1d5db",
+          borderRadius: "12px",
+          padding: "12px 14px",
+          minHeight: "86px",
+          display: "flex",
+          alignItems: "center",
+          gap: "10px",
+        }}
+      >
+        <BedSVG color={null} />
+        <div>
+          <div
+            style={{
+              fontSize: "10px",
+              fontWeight: 500,
+              color: "#94a3b8",
+              letterSpacing: "0.07em",
+              textTransform: "uppercase",
+              marginBottom: "3px",
+            }}
+          >
+            Bed {String(bedNumber).padStart(2, "0")}
+          </div>
+          <div style={{ fontSize: "12px", color: "#94a3b8" }}>Available</div>
+        </div>
+      </div>
+    );
+  }
+
+  const c = CONDITION_CONFIG[patient.condition] || CONDITION_CONFIG.stable;
 
   return (
     <div
-      onClick={() => patient && onClick(patient)}
+      onClick={() => onClick(patient)}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       style={{
-        background: "#ffffff",
-        border: "1.5px solid #e2e8f0",
-        borderRadius: "10px",
+        background: hovered ? c.fill : "var(--surface-2, #ffffff)",
+        border: `0.5px solid ${hovered ? c.dot : "var(--border, #e2e8f0)"}`,
+        borderLeft: `3px solid ${c.dot}`,
+        borderRadius: "0 12px 12px 0",
         padding: "12px 14px",
-        cursor: patient ? "pointer" : "default",
+        minHeight: "86px",
         display: "flex",
-        alignItems: "center",
-        gap: "12px",
-        minHeight: "70px",
-        transition: "box-shadow 0.15s, border-color 0.15s",
-        boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
-      }}
-      onMouseEnter={(e) => {
-        if (patient) {
-          e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.12)";
-          e.currentTarget.style.borderColor = "#94a3b8";
-        }
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.06)";
-        e.currentTarget.style.borderColor = "#e2e8f0";
+        alignItems: "flex-start",
+        gap: "10px",
+        cursor: "pointer",
+        transition: "background 0.15s, border-color 0.15s",
       }}
     >
-      {/* Bed icon */}
-      <div style={{ flexShrink: 0 }}>
-        <svg width="32" height="24" viewBox="0 0 32 24" fill="none">
-          <rect x="0" y="12" width="32" height="9" rx="2" fill="#cbd5e1" />
-          <rect x="0" y="7" width="7" height="7" rx="1" fill="#cbd5e1" />
-          <rect x="0" y="18" width="3" height="6" rx="1" fill="#94a3b8" />
-          <rect x="29" y="18" width="3" height="6" rx="1" fill="#94a3b8" />
-        </svg>
-      </div>
+      <BedSVG color={c.dot} />
 
-      {/* Text block */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div
           style={{
-            fontSize: "11px",
-            fontWeight: 700,
-            color: "#94a3b8",
-            letterSpacing: "0.05em",
-          }}
-        >
-          BED {String(bedNumber).padStart(2, "0")}
-        </div>
-
-        {patient ? (
-          <div
-            style={{
-              fontSize: "13px",
-              fontWeight: 600,
-              color: "#1e293b",
-              marginTop: "2px",
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-            }}
-          >
-            {patient.first_name} {patient.last_name}
-          </div>
-        ) : (
-          <div style={{ fontSize: "12px", color: "#cbd5e1", marginTop: "2px" }}>
-            EMPTY
-          </div>
-        )}
-      </div>
-
-      {/* Condition badge — coloured only here */}
-      {badge && (
-        <span
-          style={{
-            flexShrink: 0,
             fontSize: "10px",
-            fontWeight: 700,
-            letterSpacing: "0.06em",
+            fontWeight: 500,
+            color: "#94a3b8",
+            letterSpacing: "0.07em",
             textTransform: "uppercase",
-            color: "#fff",
-            background: badge.bg,
-            borderRadius: "5px",
-            padding: "3px 8px",
+            marginBottom: "3px",
           }}
         >
-          {badge.label}
-        </span>
-      )}
+          Bed {String(bedNumber).padStart(2, "0")}
+        </div>
+        <div
+          style={{
+            fontSize: "13px",
+            fontWeight: 500,
+            color: "var(--text-primary, #0f172a)",
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
+        >
+          {patient.first_name} {patient.last_name}
+        </div>
+        <div
+          style={{
+            fontSize: "11px",
+            color: "var(--text-secondary, #64748b)",
+            marginTop: "3px",
+          }}
+        >
+          {patient.disease || patient.diagnosis || "—"} · Age {patient.age}
+        </div>
+        <div
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "4px",
+            fontSize: "10px",
+            fontWeight: 500,
+            borderRadius: "20px",
+            padding: "2px 8px",
+            textTransform: "uppercase",
+            letterSpacing: "0.05em",
+            background: c.fill,
+            color: c.text,
+            marginTop: "5px",
+          }}
+        >
+          <span
+            style={{
+              width: "6px",
+              height: "6px",
+              borderRadius: "50%",
+              background: c.dot,
+              display: "inline-block",
+            }}
+          />
+          {c.label}
+        </div>
+      </div>
     </div>
   );
 }
@@ -263,7 +247,10 @@ function BedCard({ bedNumber, patient, onClick }) {
 
 function PatientModal({ patient, onClose }) {
   if (!patient) return null;
-  const badge = CONDITION_CONFIG[patient.condition];
+  const c = CONDITION_CONFIG[patient.condition] || CONDITION_CONFIG.stable;
+  const ini = (
+    (patient.first_name?.[0] ?? "") + (patient.last_name?.[0] ?? "")
+  ).toUpperCase();
 
   return (
     <div
@@ -271,7 +258,7 @@ function PatientModal({ patient, onClose }) {
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(0,0,0,0.4)",
+        background: "rgba(15,23,42,0.45)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -282,106 +269,153 @@ function PatientModal({ patient, onClose }) {
         onClick={(e) => e.stopPropagation()}
         style={{
           background: "#fff",
-          borderRadius: "14px",
-          padding: "28px 32px",
+          borderRadius: "16px",
           width: "90%",
           maxWidth: "400px",
-          boxShadow: "0 8px 40px rgba(0,0,0,0.2)",
+          boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
+          overflow: "hidden",
         }}
       >
-        {/* Header */}
         <div
           style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            marginBottom: "4px",
+            background: c.fill,
+            borderBottom: `2px solid ${c.dot}`,
+            padding: "20px 24px 16px",
           }}
         >
-          <h2 style={{ margin: 0, fontSize: "18px", color: "#0f172a" }}>
-            {patient.first_name} {patient.last_name}
-          </h2>
-          <button
-            onClick={onClose}
+          <div
             style={{
-              border: "none",
-              background: "none",
-              cursor: "pointer",
-              fontSize: "22px",
-              color: "#94a3b8",
-              lineHeight: 1,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "flex-start",
             }}
           >
-            ×
-          </button>
-        </div>
-
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            marginBottom: "20px",
-          }}
-        >
-          <span style={{ fontSize: "12px", color: "#64748b" }}>
-            {patient.patient_id}
-          </span>
-          {badge && (
-            <span
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <div
+                style={{
+                  width: "44px",
+                  height: "44px",
+                  borderRadius: "50%",
+                  background: c.dot,
+                  color: "#fff",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "15px",
+                  fontWeight: 700,
+                  flexShrink: 0,
+                }}
+              >
+                {ini}
+              </div>
+              <div>
+                <div
+                  style={{
+                    fontSize: "17px",
+                    fontWeight: 600,
+                    color: "#0f172a",
+                  }}
+                >
+                  {patient.first_name} {patient.last_name}
+                </div>
+                <div
+                  style={{
+                    fontSize: "12px",
+                    color: "#64748b",
+                    marginTop: "2px",
+                  }}
+                >
+                  {patient.patient_id}
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
               style={{
-                fontSize: "10px",
-                fontWeight: 700,
-                textTransform: "uppercase",
-                color: "#fff",
-                background: badge.bg,
-                borderRadius: "4px",
-                padding: "2px 8px",
+                border: "none",
+                background: "none",
+                cursor: "pointer",
+                fontSize: "22px",
+                color: "#94a3b8",
+                lineHeight: 1,
+                padding: "0 0 0 8px",
               }}
             >
-              {badge.label}
-            </span>
-          )}
+              ×
+            </button>
+          </div>
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "5px",
+              marginTop: "12px",
+              fontSize: "11px",
+              fontWeight: 600,
+              textTransform: "uppercase",
+              letterSpacing: "0.06em",
+              color: c.text,
+              background: "#fff",
+              borderRadius: "20px",
+              padding: "3px 10px",
+              border: `1px solid ${c.dot}`,
+            }}
+          >
+            <span
+              style={{
+                width: "7px",
+                height: "7px",
+                borderRadius: "50%",
+                background: c.dot,
+                display: "inline-block",
+              }}
+            />
+            {c.label}
+          </div>
         </div>
 
-        {/* Details grid */}
         <div
           style={{
+            padding: "20px 24px 24px",
             display: "grid",
             gridTemplateColumns: "1fr 1fr",
-            gap: "14px",
+            gap: "16px",
           }}
         >
           {[
             ["Ward", patient.ward],
-            ["Bed", patient.bed_number],
-            ["Age", patient.age],
+            ["Bed", `Bed ${patient.bed_number}`],
+            ["Age", `${patient.age} yrs`],
             ["Gender", patient.gender],
+            ["Disease", patient.disease || patient.diagnosis || "—"],
             ["Device", patient.assigned_device || "—"],
           ].map(([lbl, val]) => (
-            <div key={lbl}>
-              <p
+            <div
+              key={lbl}
+              style={{ borderLeft: "2px solid #e2e8f0", paddingLeft: "10px" }}
+            >
+              <div
                 style={{
-                  margin: 0,
                   fontSize: "10px",
-                  fontWeight: 700,
+                  fontWeight: 600,
                   textTransform: "uppercase",
+                  letterSpacing: "0.06em",
                   color: "#94a3b8",
                 }}
               >
                 {lbl}
-              </p>
-              <p
+              </div>
+              <div
                 style={{
-                  margin: "2px 0 0",
-                  fontSize: "14px",
+                  fontSize: "13px",
                   fontWeight: 600,
-                  color: "#1e293b",
+                  color: "#0f172a",
+                  marginTop: "3px",
                   textTransform: "capitalize",
                 }}
               >
                 {val}
-              </p>
+              </div>
             </div>
           ))}
         </div>
@@ -397,37 +431,205 @@ function Legend() {
     <div
       style={{
         display: "flex",
-        gap: "14px",
+        gap: "16px",
         flexWrap: "wrap",
         marginBottom: "20px",
+        paddingBottom: "16px",
+        borderBottom: "0.5px solid #e2e8f0",
+        alignItems: "center",
       }}
     >
-      {Object.entries(CONDITION_CONFIG).map(([key, { bg, label }]) => (
+      <span
+        style={{
+          fontSize: "10px",
+          fontWeight: 500,
+          color: "#94a3b8",
+          textTransform: "uppercase",
+          letterSpacing: "0.07em",
+        }}
+      >
+        Status
+      </span>
+      {Object.entries(CONDITION_CONFIG).map(([key, { dot, label }]) => (
         <div
           key={key}
-          style={{ display: "flex", alignItems: "center", gap: "6px" }}
+          style={{ display: "flex", alignItems: "center", gap: "5px" }}
         >
-          <div
+          <span
             style={{
-              width: "10px",
-              height: "10px",
-              borderRadius: "3px",
-              background: bg,
+              width: "8px",
+              height: "8px",
+              borderRadius: "50%",
+              background: dot,
+              display: "inline-block",
             }}
           />
           <span style={{ fontSize: "12px", color: "#64748b" }}>{label}</span>
         </div>
       ))}
-      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+    </div>
+  );
+}
+
+// ─── WardPanel ────────────────────────────────────────────────────────────────
+
+function WardPanel({ wardName, wardPatients, onSelectPatient }) {
+  const bedMap = buildBedMap(wardPatients);
+  const total = totalBeds(bedMap);
+  const occupied = wardPatients.length;
+  const empty = total - occupied;
+  const critical = wardPatients.filter(
+    (p) => p.condition === "critical",
+  ).length;
+
+  const rows = [];
+  for (let i = 1; i <= total; i += 2) {
+    rows.push([i, i + 1]);
+  }
+
+  return (
+    <div
+      style={{
+        background: "#fff",
+        borderRadius: "12px",
+        overflow: "hidden",
+        marginBottom: "28px",
+        border: "0.5px solid #e2e8f0",
+      }}
+    >
+      <div
+        style={{
+          background: "#1e40af",
+          padding: "16px 24px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: "12px",
+        }}
+      >
+        <div>
+          <div
+            style={{
+              fontSize: "10px",
+              fontWeight: 500,
+              color: "rgba(255,255,255,0.6)",
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              marginBottom: "2px",
+            }}
+          >
+            General ward
+          </div>
+          <div style={{ fontSize: "17px", fontWeight: 500, color: "#fff" }}>
+            {wardName}
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: "24px" }}>
+          {[
+            { label: "Occupied", value: occupied, color: "#93c5fd" },
+            { label: "Empty", value: empty, color: "rgba(255,255,255,0.35)" },
+            { label: "Critical", value: critical, color: "#fca5a5" },
+          ].map(({ label, value, color }) => (
+            <div key={label} style={{ textAlign: "center" }}>
+              <div style={{ fontSize: "22px", fontWeight: 500, color }}>
+                {value}
+              </div>
+              <div
+                style={{
+                  fontSize: "10px",
+                  color: "rgba(255,255,255,0.6)",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.06em",
+                }}
+              >
+                {label}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ padding: "20px 24px 28px" }}>
+        <Legend />
+
         <div
           style={{
-            width: "10px",
-            height: "10px",
-            borderRadius: "3px",
-            background: "#e2e8f0",
+            display: "grid",
+            gridTemplateColumns: "1fr 40px 1fr",
+            marginBottom: "8px",
           }}
-        />
-        <span style={{ fontSize: "12px", color: "#64748b" }}>Empty</span>
+        >
+          <div
+            style={{
+              fontSize: "10px",
+              fontWeight: 500,
+              color: "#94a3b8",
+              textTransform: "uppercase",
+              letterSpacing: "0.07em",
+            }}
+          >
+            ← Side A
+          </div>
+          <div />
+          <div
+            style={{
+              fontSize: "10px",
+              fontWeight: 500,
+              color: "#94a3b8",
+              textTransform: "uppercase",
+              letterSpacing: "0.07em",
+              textAlign: "right",
+            }}
+          >
+            Side B →
+          </div>
+        </div>
+
+        {rows.map(([leftN, rightN], ri) => (
+          <div
+            key={ri}
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 40px 1fr",
+              marginBottom: "14px",
+              alignItems: "stretch",
+            }}
+          >
+            <BedCard
+              bedNumber={leftN}
+              patient={bedMap[String(leftN)] ?? null}
+              onClick={onSelectPatient}
+            />
+
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "4px",
+              }}
+            >
+              <div style={{ width: "1px", flex: 1, background: "#e2e8f0" }} />
+              <div
+                style={{
+                  width: "5px",
+                  height: "5px",
+                  borderRadius: "50%",
+                  background: "#e2e8f0",
+                }}
+              />
+              <div style={{ width: "1px", flex: 1, background: "#e2e8f0" }} />
+            </div>
+
+            <BedCard
+              bedNumber={rightN}
+              patient={bedMap[String(rightN)] ?? null}
+              onClick={onSelectPatient}
+            />
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -436,26 +638,89 @@ function Legend() {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function Wards() {
+  const [patients, setPatients] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [selectedPatient, setSelectedPatient] = useState(null);
+  const [activeWard, setActiveWard] = useState(null);
 
-  const bedMap = buildBedMap(SAMPLE_PATIENTS);
-  const beds = Array.from({ length: TOTAL_BEDS }, (_, i) => i + 1);
-  const occupied = Object.keys(bedMap).length;
-  const available = TOTAL_BEDS - occupied;
-  const critical = Object.values(bedMap).filter(
-    (p) => p.condition === "critical",
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      setLoading(true);
+      setError(null);
+      try {
+        const { data } = await client.get("/patients/?is_discharged=false");
+        if (!cancelled) {
+          const list = Array.isArray(data) ? data : (data.results ?? []);
+          setPatients(list);
+        }
+      } catch {
+        if (!cancelled)
+          setError("Could not load patient data. Please try again.");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const wardMap = groupByWard(patients);
+  const wardNames = Object.keys(wardMap).sort();
+
+  useEffect(() => {
+    if (wardNames.length && activeWard === null) setActiveWard(wardNames[0]);
+  }, [wardNames.join(",")]);
+
+  const activeCount = patients.filter(
+    (p) => !p.is_discharged && !p.is_archived,
   ).length;
+  const visibleWards = activeWard
+    ? wardNames.filter((w) => w === activeWard)
+    : wardNames;
+
+  if (loading) {
+    return (
+      <div
+        style={{
+          padding: "40px",
+          textAlign: "center",
+          color: "#64748b",
+          fontFamily: "'Inter','Segoe UI',sans-serif",
+        }}
+      >
+        Loading ward data…
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div
+        style={{
+          padding: "40px",
+          textAlign: "center",
+          color: "#dc2626",
+          fontFamily: "'Inter','Segoe UI',sans-serif",
+        }}
+      >
+        {error}
+      </div>
+    );
+  }
 
   return (
     <div
       style={{
         padding: "28px",
-        fontFamily: "'Inter', 'Segoe UI', sans-serif",
+        fontFamily: "'Inter','Segoe UI',sans-serif",
         background: "#f8fafc",
         minHeight: "100vh",
       }}
     >
-      {/* Page header */}
       <h1
         style={{
           margin: "0 0 4px",
@@ -466,87 +731,57 @@ export default function Wards() {
       >
         Ward Bed Layout
       </h1>
-      <p style={{ margin: "0 0 24px", fontSize: "13px", color: "#64748b" }}>
-        {WARD_NAME} · 2 × 5 grid
+      <p style={{ margin: "0 0 20px", fontSize: "13px", color: "#64748b" }}>
+        {activeCount} active patient{activeCount !== 1 ? "s" : ""} across{" "}
+        {wardNames.length} ward{wardNames.length !== 1 ? "s" : ""}
       </p>
 
-      {/* Ward card */}
-      <div
-        style={{
-          background: "#fff",
-          borderRadius: "14px",
-          boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
-          overflow: "hidden",
-        }}
-      >
-        {/* Ward header bar */}
+      {wardNames.length > 1 && (
         <div
           style={{
-            background: "#1e40af",
-            padding: "16px 24px",
             display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
+            gap: "8px",
             flexWrap: "wrap",
-            gap: "12px",
+            marginBottom: "24px",
           }}
         >
-          <h2
-            style={{
-              margin: 0,
-              fontSize: "17px",
-              fontWeight: 700,
-              color: "#fff",
-            }}
-          >
-            {WARD_NAME}
-          </h2>
-          <div style={{ display: "flex", gap: "20px" }}>
-            {[
-              { label: "Occupied", value: occupied, color: "#93c5fd" },
-              { label: "Available", value: available, color: "#86efac" },
-              { label: "Critical", value: critical, color: "#fca5a5" },
-            ].map(({ label, value, color }) => (
-              <div key={label} style={{ textAlign: "center" }}>
-                <div style={{ fontSize: "20px", fontWeight: 800, color }}>
-                  {value}
-                </div>
-                <div
-                  style={{
-                    fontSize: "10px",
-                    color: "rgba(255,255,255,0.65)",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.05em",
-                  }}
-                >
-                  {label}
-                </div>
-              </div>
-            ))}
-          </div>
+          {wardNames.map((w) => (
+            <button
+              key={w}
+              onClick={() => setActiveWard(activeWard === w ? null : w)}
+              style={{
+                padding: "6px 18px",
+                borderRadius: "20px",
+                border: "1.5px solid",
+                borderColor: activeWard === w ? "#1e40af" : "#e2e8f0",
+                background: activeWard === w ? "#1e40af" : "#fff",
+                color: activeWard === w ? "#fff" : "#64748b",
+                fontSize: "13px",
+                fontWeight: 600,
+                cursor: "pointer",
+                transition: "all 0.15s",
+              }}
+            >
+              {w}
+            </button>
+          ))}
         </div>
+      )}
 
-        {/* Legend + grid */}
-        <div style={{ padding: "20px 24px" }}>
-          <Legend />
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: `repeat(${COLUMNS}, 1fr)`,
-              gap: "18px",
-            }}
-          >
-            {beds.map((n) => (
-              <BedCard
-                key={n}
-                bedNumber={n}
-                patient={bedMap[String(n)] ?? null}
-                onClick={setSelectedPatient}
-              />
-            ))}
-          </div>
-        </div>
-      </div>
+      {wardNames.length === 0 ? (
+        <p style={{ color: "#94a3b8", fontSize: "14px" }}>
+          No active patients found.
+        </p>
+      ) : (
+        visibleWards.map((w) => (
+          <WardPanel
+            key={w}
+            wardName={w}
+            wardPatients={wardMap[w]}
+            onSelectPatient={setSelectedPatient}
+          />
+        ))
+      )}
 
       <PatientModal
         patient={selectedPatient}

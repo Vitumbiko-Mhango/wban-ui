@@ -1,15 +1,3 @@
-/**
- * src/pages/staff/ShiftHandover.jsx  (REPLACE YOUR EXISTING FILE)
- *
- * Fixes:
- *  1. CURRENT_USER now comes from useAuth() — no longer hardcoded
- *  2. Patients list loaded from GET /api/patients/ — no longer static
- *  3. New notes are saved via POST /api/handover-notes/
- *  4. Existing notes loaded from GET /api/handover-notes/
- *  5. Delete via DELETE /api/handover-notes/{id}/
- *  6. NoteCard "isOwn" check uses the real logged-in username
- */
-
 import React, {
   useState,
   useMemo,
@@ -24,6 +12,7 @@ import {
   X,
   AlertTriangle,
   LoaderCircle,
+  Search,
 } from "lucide-react";
 import Heading from "../../components/common/Heading";
 import Button from "../../components/common/Button";
@@ -58,8 +47,138 @@ const schema = z.object({
   medications_due: z.string().optional(),
 });
 
+// ── Custom patient dropdown — names only, searchable, scrollable ──────────────
+const PatientSelect = ({
+  patients,
+  loading,
+  register,
+  error,
+  setValue,
+  watch,
+}) => {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const wrapRef = useRef(null);
+  const searchRef = useRef(null);
+
+  // Close on outside click
+  useClickOutside(wrapRef, () => setOpen(false));
+
+  // Focus search input when dropdown opens
+  useEffect(() => {
+    if (open) searchRef.current?.focus();
+  }, [open]);
+
+  const selectedId = watch("patient_id");
+  const selectedPatient = patients.find(
+    (p) => String(p.id) === String(selectedId),
+  );
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return patients;
+    const q = search.toLowerCase();
+    return patients.filter((p) => p.fullName.toLowerCase().includes(q));
+  }, [patients, search]);
+
+  const choose = (p) => {
+    setValue("patient_id", String(p.id), { shouldValidate: true });
+    setSearch("");
+    setOpen(false);
+  };
+
+  return (
+    <div className="w-full" ref={wrapRef}>
+      <label className="label">Patient</label>
+
+      {/* Hidden input keeps react-hook-form in sync */}
+      <input type="hidden" {...register("patient_id")} />
+
+      {/* Trigger button */}
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className={`input w-full flex items-center justify-between text-left cursor-pointer ${
+          error ? "input-error" : ""
+        }`}
+      >
+        <span className={selectedPatient ? "text-dark-a0" : "text-dark-a0/40"}>
+          {loading
+            ? "Loading patients…"
+            : selectedPatient
+              ? selectedPatient.fullName
+              : "Select patient…"}
+        </span>
+        <svg
+          className={`size-4 text-dark-a0/40 shrink-0 transition-transform duration-150 ${open ? "rotate-180" : ""}`}
+          viewBox="0 0 20 20"
+          fill="currentColor"
+        >
+          <path
+            fillRule="evenodd"
+            d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+            clipRule="evenodd"
+          />
+        </svg>
+      </button>
+
+      {/* Dropdown panel */}
+      {open && (
+        <div className="absolute z-50 mt-1 w-72 bg-light-a0 border border-surface-a30 rounded-lg shadow-lg overflow-hidden">
+          {/* Search */}
+          <div className="p-2 border-b border-surface-a30">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-dark-a0/40 pointer-events-none" />
+              <input
+                ref={searchRef}
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search name…"
+                className="input pl-8 py-1.5 text-sm w-full"
+              />
+            </div>
+          </div>
+
+          {/* Scrollable name list */}
+          <ul className="max-h-48 overflow-y-auto divide-y divide-surface-a30/50">
+            {loading ? (
+              <li className="px-4 py-3 text-sm text-dark-a0/40">Loading…</li>
+            ) : filtered.length === 0 ? (
+              <li className="px-4 py-3 text-sm text-dark-a0/40">
+                No patients found
+              </li>
+            ) : (
+              filtered.map((p) => (
+                <li
+                  key={p.id}
+                  onClick={() => choose(p)}
+                  className={`px-4 py-2.5 text-sm cursor-pointer transition-colors hover:bg-primary-a20/10 ${
+                    String(p.id) === String(selectedId)
+                      ? "bg-primary-a20/20 font-medium text-primary-a20"
+                      : "text-dark-a0"
+                  }`}
+                >
+                  {p.fullName}
+                </li>
+              ))
+            )}
+          </ul>
+        </div>
+      )}
+
+      {error && <p className="error-text mt-1">{error.message}</p>}
+    </div>
+  );
+};
+
 // ── Write Note Modal ──────────────────────────────────────────────────────────
-const WriteNoteModal = ({ onClose, onSaved, patients, currentUser }) => {
+const WriteNoteModal = ({
+  onClose,
+  onSaved,
+  patients,
+  patientsLoading,
+  currentUser,
+}) => {
   const formRef = useRef(null);
   useClickOutside(formRef, onClose);
 
@@ -67,6 +186,7 @@ const WriteNoteModal = ({ onClose, onSaved, patients, currentUser }) => {
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(schema),
@@ -83,6 +203,7 @@ const WriteNoteModal = ({ onClose, onSaved, patients, currentUser }) => {
   const isCritical = watch("is_critical");
 
   const submitHandler = async (data) => {
+    // Find the selected patient to enrich the locally-added note card
     const patient = patients.find((p) => p.id === Number(data.patient_id));
 
     const payload = {
@@ -94,48 +215,31 @@ const WriteNoteModal = ({ onClose, onSaved, patients, currentUser }) => {
       medications_due: data.medications_due || "",
     };
 
-    try {
-      const { data: saved } = await client.post("/handover-notes/", payload);
-      // Shape the response to match what NoteCard expects
-      onSaved({
-        id: saved.id,
-        patient:
-          patient?.name || saved.patient_name || `Patient ${data.patient_id}`,
-        ward: patient?.ward || saved.ward || "",
-        bed: patient?.bed || saved.bed || "",
-        shift: saved.shift,
-        is_critical: saved.is_critical,
-        written_by: saved.written_by || currentUser,
-        time: new Date(saved.created_at || Date.now()).toLocaleTimeString(
-          "en-US",
-          {
-            hour: "2-digit",
-            minute: "2-digit",
-          },
-        ),
-        notes: saved.notes,
-        pending_tasks: saved.pending_tasks || "",
-        medications_due: saved.medications_due || "",
-      });
-    } catch {
-      // Fallback: optimistically add locally if API not yet wired
-      onSaved({
-        id: Date.now(),
-        patient: patient?.name || `Patient ${data.patient_id}`,
-        ward: patient?.ward || "",
-        bed: patient?.bed || "",
-        shift: data.shift,
-        is_critical: data.is_critical,
-        written_by: currentUser,
-        time: new Date().toLocaleTimeString("en-US", {
+    const { data: saved } = await client.post("/handover/", payload);
+
+    // Shape the saved response into what NoteCard expects.
+    // written_by_name comes from the serializer; fall back to currentUser.
+    onSaved({
+      id: saved.id,
+      patient:
+        saved.patient_name || patient?.fullName || `Patient ${data.patient_id}`,
+      ward: patient?.ward || "",
+      bed: patient?.bed_number || "",
+      shift: saved.shift,
+      is_critical: saved.is_critical,
+      written_by: saved.written_by_name || currentUser,
+      time: new Date(saved.created_at || Date.now()).toLocaleTimeString(
+        "en-US",
+        {
           hour: "2-digit",
           minute: "2-digit",
-        }),
-        notes: data.notes,
-        pending_tasks: data.pending_tasks || "",
-        medications_due: data.medications_due || "",
-      });
-    }
+        },
+      ),
+      notes: saved.notes,
+      pending_tasks: saved.pending_tasks || "",
+      medications_due: saved.medications_due || "",
+    });
+
     onClose();
   };
 
@@ -161,34 +265,24 @@ const WriteNoteModal = ({ onClose, onSaved, patients, currentUser }) => {
           <p className="text-sm text-dark-a0/60">
             Document patient status for the incoming shift.
           </p>
-          {/* Show who is writing the note */}
           <p className="text-xs text-primary-a20 mt-1 font-medium">
             Writing as: {currentUser}
           </p>
         </div>
 
         <div className="space-y-4 mt-6">
-          {/* Patient + Shift */}
-          <div className="space-y-2 md:space-y-0 md:flex gap-4">
-            <div className="w-full">
-              <label className="label">Patient</label>
-              <select
-                {...register("patient_id")}
-                className={`input ${errors.patient_id ? "input-error" : ""}`}
-              >
-                <option value="">Select patient...</option>
-                {patients.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name} — {p.ward}, {p.bed}
-                  </option>
-                ))}
-              </select>
-              {errors.patient_id && (
-                <p className="error-text">{errors.patient_id.message}</p>
-              )}
-            </div>
+          {/* Patient select + Shift on same row */}
+          <div className="space-y-4 md:space-y-0 md:flex gap-4 items-start">
+            <PatientSelect
+              patients={patients}
+              loading={patientsLoading}
+              register={register}
+              error={errors.patient_id}
+              setValue={setValue}
+              watch={watch}
+            />
 
-            <div className="w-full">
+            <div className="w-full md:w-48 shrink-0">
               <label className="label">Shift</label>
               <select {...register("shift")} className="input">
                 <option value="morning">Morning</option>
@@ -204,7 +298,7 @@ const WriteNoteModal = ({ onClose, onSaved, patients, currentUser }) => {
             <textarea
               {...register("notes")}
               rows={4}
-              placeholder="Describe the patient's condition, any events during the shift..."
+              placeholder="Describe the patient's condition, any events during the shift…"
               className={`input resize-none ${errors.notes ? "input-error" : ""}`}
             />
             {errors.notes && (
@@ -222,7 +316,9 @@ const WriteNoteModal = ({ onClose, onSaved, patients, currentUser }) => {
             />
             <label
               htmlFor="is_critical"
-              className={`text-sm font-medium cursor-pointer ${isCritical ? "text-danger-a0" : "text-dark-a0/70"}`}
+              className={`text-sm font-medium cursor-pointer ${
+                isCritical ? "text-danger-a0" : "text-dark-a0/70"
+              }`}
             >
               Mark as Critical
             </label>
@@ -243,7 +339,7 @@ const WriteNoteModal = ({ onClose, onSaved, patients, currentUser }) => {
             <textarea
               {...register("pending_tasks")}
               rows={2}
-              placeholder="e.g. ECG at 09:00, blood cultures pending..."
+              placeholder="e.g. ECG at 09:00, blood cultures pending…"
               className="input resize-none"
             />
           </div>
@@ -257,7 +353,7 @@ const WriteNoteModal = ({ onClose, onSaved, patients, currentUser }) => {
             <textarea
               {...register("medications_due")}
               rows={2}
-              placeholder="e.g. Amlodipine 5mg at 08:00..."
+              placeholder="e.g. Amlodipine 5mg at 08:00…"
               className="input resize-none"
             />
           </div>
@@ -273,7 +369,7 @@ const WriteNoteModal = ({ onClose, onSaved, patients, currentUser }) => {
             >
               {isSubmitting ? (
                 <span className="flex items-center gap-2">
-                  <LoaderCircle className="size-4 animate-spin" /> Saving...
+                  <LoaderCircle className="size-4 animate-spin" /> Saving…
                 </span>
               ) : (
                 "Save Note"
@@ -288,7 +384,7 @@ const WriteNoteModal = ({ onClose, onSaved, patients, currentUser }) => {
 
 // ── Note Card ─────────────────────────────────────────────────────────────────
 const NoteCard = ({ note, onDelete, currentUser }) => {
-  // "isOwn" now compares against the real logged-in user
+  // written_by_name from the serializer; compare against current user display name
   const isOwn = note.written_by === currentUser;
 
   return (
@@ -304,10 +400,13 @@ const NoteCard = ({ note, onDelete, currentUser }) => {
           <div className="flex items-center flex-wrap gap-2">
             <h3 className="font-bold text-dark-a0">{note.patient}</h3>
             <span className="text-xs text-dark-a0/50">
-              {note.ward} · {note.bed}
+              {note.ward}
+              {note.bed ? ` · Bed ${note.bed}` : ""}
             </span>
             <span
-              className={`text-xs font-medium px-2 py-0.5 rounded-full capitalize ${SHIFT_STYLES[note.shift]}`}
+              className={`text-xs font-medium px-2 py-0.5 rounded-full capitalize ${
+                SHIFT_STYLES[note.shift] ?? ""
+              }`}
             >
               {note.shift}
             </span>
@@ -357,86 +456,105 @@ const NoteCard = ({ note, onDelete, currentUser }) => {
   );
 };
 
+// ── Shape a raw API note into what NoteCard expects ───────────────────────────
+const normalizeNote = (n) => ({
+  id: n.id,
+  patient: n.patient_name || `Patient ${n.patient}`,
+  // The handover serializer doesn't return ward/bed — carry them from patients state
+  ward: n.ward || "",
+  bed: n.bed || "",
+  shift: n.shift,
+  is_critical: n.is_critical,
+  // Serializer exposes written_by_name (the username), not written_by
+  written_by: n.written_by_name || n.written_by || "Unknown",
+  time: new Date(n.created_at).toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+  }),
+  notes: n.notes,
+  pending_tasks: n.pending_tasks || "",
+  medications_due: n.medications_due || "",
+});
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 const ShiftHandover = () => {
   const { user } = useAuth();
 
-  // Build the display name from the logged-in user
-  const firstName =
-    user?.first_name || user?.firstname || user?.username || "User";
-  const lastName = user?.last_name || user?.lastname || "";
+  const firstName = user?.first_name || user?.username || "User";
+  const lastName = user?.last_name || "";
   const currentUser = lastName ? `${firstName} ${lastName}` : firstName;
 
   const [notes, setNotes] = useState([]);
   const [patients, setPatients] = useState([]);
+  const [patientsLoading, setPatientsLoading] = useState(true);
+  const [notesLoading, setNotesLoading] = useState(true);
+  const [error, setError] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [shiftFilter, setShiftFilter] = useState("all");
   const [wardFilter, setWardFilter] = useState("All Wards");
   const [criticalOnly, setCriticalOnly] = useState(false);
-  const [loading, setLoading] = useState(true);
 
-  // ── Load patients and existing notes ───────────────────────────────────────
-  const fetchData = useCallback(async () => {
+  // ── Load patients from PostgreSQL ──────────────────────────────────────────
+  // Fetched separately so the modal can open immediately even if notes are slow
+  const fetchPatients = useCallback(async () => {
+    setPatientsLoading(true);
     try {
-      const [notesRes, patientsRes] = await Promise.all([
-        client.get("/handover-notes/"),
-        client.get("/patients/?is_discharged=false"),
-      ]);
-
-      const notesList = notesRes.data?.results ?? notesRes.data ?? [];
-      setNotes(
-        notesList.map((n) => ({
-          id: n.id,
-          patient: n.patient_name || `Patient ${n.patient}`,
-          ward: n.ward || "",
-          bed: n.bed || "",
-          shift: n.shift,
-          is_critical: n.is_critical,
-          written_by: n.written_by || n.author_name || "Unknown",
-          time: new Date(n.created_at).toLocaleTimeString("en-US", {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-          notes: n.notes,
-          pending_tasks: n.pending_tasks || "",
-          medications_due: n.medications_due || "",
-        })),
+      const { data } = await client.get(
+        "/patients/?is_discharged=false&page_size=200",
       );
-
-      const patientsList = patientsRes.data?.results ?? patientsRes.data ?? [];
+      const list = data?.results ?? data ?? [];
+      // Shape into what the dropdown and form need
       setPatients(
-        patientsList.map((p) => ({
+        list.map((p) => ({
           id: p.id,
-          name: `${p.first_name} ${p.last_name}`,
+          patient_id: p.patient_id, // PT-YYYY-NNN
+          fullName: `${p.first_name} ${p.last_name}`,
           ward: p.ward,
-          bed: p.bed_number,
+          bed_number: p.bed_number,
+          condition: p.condition,
         })),
       );
     } catch {
-      // If the handover endpoint isn't ready yet, start empty
+      setError("Could not load patients. Check your connection.");
+    } finally {
+      setPatientsLoading(false);
+    }
+  }, []);
+
+  // ── Load existing handover notes ───────────────────────────────────────────
+  const fetchNotes = useCallback(async () => {
+    setNotesLoading(true);
+    try {
+      const { data } = await client.get("/handover/?page_size=100");
+      const list = data?.results ?? data ?? [];
+      setNotes(list.map(normalizeNote));
+    } catch {
       setNotes([]);
     } finally {
-      setLoading(false);
+      setNotesLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    fetchPatients();
+    fetchNotes();
+  }, [fetchPatients, fetchNotes]);
 
   // ── Delete ─────────────────────────────────────────────────────────────────
   const handleDelete = async (id) => {
     try {
-      await client.delete(`/handover-notes/${id}/`);
+      await client.delete(`/handover/${id}/`);
     } finally {
       setNotes((prev) => prev.filter((n) => n.id !== id));
     }
   };
 
+  // ── Filters ────────────────────────────────────────────────────────────────
   const wards = [
     "All Wards",
     ...new Set(notes.map((n) => n.ward).filter(Boolean)),
   ];
+
   const filtered = useMemo(
     () =>
       notes.filter((note) => {
@@ -450,6 +568,7 @@ const ShiftHandover = () => {
   );
 
   const criticalCount = notes.filter((n) => n.is_critical).length;
+  const loading = notesLoading;
 
   return (
     <div className="space-y-6">
@@ -467,6 +586,13 @@ const ShiftHandover = () => {
           Write Note
         </Button>
       </div>
+
+      {error && (
+        <div className="flex items-center gap-3 bg-danger-a20 border border-danger-a10/40 rounded-lg px-4 py-3">
+          <AlertTriangle className="size-5 text-danger-a10 shrink-0" />
+          <p className="text-sm text-danger-a0 font-medium">{error}</p>
+        </div>
+      )}
 
       {criticalCount > 0 && (
         <div className="flex items-center gap-3 bg-danger-a20 border border-danger-a10/40 rounded-lg px-4 py-3">
@@ -508,10 +634,14 @@ const ShiftHandover = () => {
         <label className="flex items-center gap-2 cursor-pointer select-none">
           <div
             onClick={() => setCriticalOnly((prev) => !prev)}
-            className={`relative w-10 h-5 rounded-full transition-colors duration-200 ${criticalOnly ? "bg-danger-a10" : "bg-surface-a30"}`}
+            className={`relative w-10 h-5 rounded-full transition-colors duration-200 ${
+              criticalOnly ? "bg-danger-a10" : "bg-surface-a30"
+            }`}
           >
             <div
-              className={`absolute top-0.5 size-4 bg-white rounded-full shadow transition-transform duration-200 ${criticalOnly ? "translate-x-5" : "translate-x-0.5"}`}
+              className={`absolute top-0.5 size-4 bg-white rounded-full shadow transition-transform duration-200 ${
+                criticalOnly ? "translate-x-5" : "translate-x-0.5"
+              }`}
             />
           </div>
           <span className="text-sm text-dark-a0/70">Critical only</span>
@@ -524,9 +654,9 @@ const ShiftHandover = () => {
 
       {/* Notes list */}
       {loading && (
-        <p className="text-center text-sm text-dark-a0/50 py-12">
-          Loading notes…
-        </p>
+        <div className="flex items-center justify-center gap-2 py-12 text-sm text-dark-a0/50">
+          <LoaderCircle className="size-4 animate-spin" /> Loading notes…
+        </div>
       )}
 
       {!loading && filtered.length === 0 && (
@@ -557,6 +687,7 @@ const ShiftHandover = () => {
           onClose={() => setShowModal(false)}
           onSaved={(newNote) => setNotes((prev) => [newNote, ...prev])}
           patients={patients}
+          patientsLoading={patientsLoading}
           currentUser={currentUser}
         />
       )}
