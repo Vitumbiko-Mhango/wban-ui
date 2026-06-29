@@ -19,17 +19,36 @@ const CONDITION_CONFIG = {
   },
 };
 
+const CHIP_STYLES = {
+  all: { border: "#1e40af", bg: "#eff6ff", color: "#1e40af" },
+  occupied: { border: "#475569", bg: "#f1f5f9", color: "#1e293b" },
+  empty: { border: "#94a3b8", bg: "#f8fafc", color: "#475569" },
+  stable: { border: "#16a34a", bg: "#dcfce7", color: "#166534" },
+  warning: { border: "#ca8a04", bg: "#fef9c3", color: "#854d0e" },
+  critical: { border: "#dc2626", bg: "#fee2e2", color: "#991b1b" },
+};
+
+const FILTERS = ["all", "occupied", "empty", "stable", "warning", "critical"];
+
+const FILTER_LABELS = {
+  all: "All beds",
+  occupied: "Occupied",
+  empty: "Empty",
+  stable: "Stable",
+  warning: "Warning",
+  critical: "Critical",
+};
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+// MODIFIED: Removed discharge filter to show ALL patients
 function groupByWard(patients) {
   const map = {};
-  patients
-    .filter((p) => !p.is_discharged && !p.is_archived)
-    .forEach((p) => {
-      const w = p.ward || "Unassigned";
-      if (!map[w]) map[w] = [];
-      map[w].push(p);
-    });
+  patients.forEach((p) => {
+    const w = p.ward || "Unassigned";
+    if (!map[w]) map[w] = [];
+    map[w].push(p);
+  });
   return map;
 }
 
@@ -42,11 +61,12 @@ function buildBedMap(wardPatients) {
   return map;
 }
 
-function totalBeds(bedMap) {
-  const nums = Object.keys(bedMap).map(Number);
-  const max = nums.length > 0 ? Math.max(...nums) : 0;
-  const ceil = max % 2 === 0 ? max : max + 1;
-  return Math.max(10, ceil);
+function bedVisible(bedNum, bedMap, filter) {
+  const p = bedMap[String(bedNum)] ?? null;
+  if (filter === "all") return true;
+  if (filter === "occupied") return !!p;
+  if (filter === "empty") return !p;
+  return p?.condition === filter;
 }
 
 // ─── BedSVG ───────────────────────────────────────────────────────────────────
@@ -115,6 +135,90 @@ function BedSVG({ color }) {
   );
 }
 
+// ─── FilterChips ──────────────────────────────────────────────────────────────
+
+function FilterChips({ active, onChange }) {
+  const dotColor = {
+    all: null,
+    occupied: "#64748b",
+    empty: null,
+    stable: "#16a34a",
+    warning: "#ca8a04",
+    critical: "#dc2626",
+  };
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        gap: "8px",
+        flexWrap: "wrap",
+        marginBottom: "20px",
+        alignItems: "center",
+      }}
+    >
+      <span
+        style={{
+          fontSize: "11px",
+          fontWeight: 500,
+          color: "#94a3b8",
+          marginRight: "2px",
+        }}
+      >
+        Filter
+      </span>
+      {FILTERS.map((f) => {
+        const isActive = active === f;
+        const s = CHIP_STYLES[f];
+        return (
+          <div
+            key={f}
+            onClick={() => onChange(f)}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "5px",
+              fontSize: "12px",
+              fontWeight: 500,
+              borderRadius: "20px",
+              padding: "5px 13px",
+              border: `1.5px solid ${isActive ? s.border : "#e2e8f0"}`,
+              background: isActive ? s.bg : "#fff",
+              color: isActive ? s.color : "#64748b",
+              cursor: "pointer",
+              transition: "all 0.15s",
+              userSelect: "none",
+            }}
+          >
+            {f === "empty" ? (
+              <span
+                style={{
+                  width: "7px",
+                  height: "7px",
+                  borderRadius: "2px",
+                  border: "1.5px dashed #94a3b8",
+                  display: "inline-block",
+                }}
+              />
+            ) : dotColor[f] ? (
+              <span
+                style={{
+                  width: "7px",
+                  height: "7px",
+                  borderRadius: "50%",
+                  background: dotColor[f],
+                  display: "inline-block",
+                }}
+              />
+            ) : null}
+            {FILTER_LABELS[f]}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ─── BedCard ──────────────────────────────────────────────────────────────────
 
 function BedCard({ bedNumber, patient, onClick }) {
@@ -124,7 +228,7 @@ function BedCard({ bedNumber, patient, onClick }) {
     return (
       <div
         style={{
-          background: "var(--surface-1, #f8fafc)",
+          background: "#f8fafc",
           border: "1.5px dashed #d1d5db",
           borderRadius: "12px",
           padding: "12px 14px",
@@ -162,8 +266,8 @@ function BedCard({ bedNumber, patient, onClick }) {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        background: hovered ? c.fill : "var(--surface-2, #ffffff)",
-        border: `0.5px solid ${hovered ? c.dot : "var(--border, #e2e8f0)"}`,
+        background: hovered ? c.fill : "#ffffff",
+        border: `0.5px solid ${hovered ? c.dot : "#e2e8f0"}`,
         borderLeft: `3px solid ${c.dot}`,
         borderRadius: "0 12px 12px 0",
         padding: "12px 14px",
@@ -176,7 +280,6 @@ function BedCard({ bedNumber, patient, onClick }) {
       }}
     >
       <BedSVG color={c.dot} />
-
       <div style={{ flex: 1, minWidth: 0 }}>
         <div
           style={{
@@ -194,7 +297,7 @@ function BedCard({ bedNumber, patient, onClick }) {
           style={{
             fontSize: "13px",
             fontWeight: 500,
-            color: "var(--text-primary, #0f172a)",
+            color: "#0f172a",
             whiteSpace: "nowrap",
             overflow: "hidden",
             textOverflow: "ellipsis",
@@ -202,13 +305,7 @@ function BedCard({ bedNumber, patient, onClick }) {
         >
           {patient.first_name} {patient.last_name}
         </div>
-        <div
-          style={{
-            fontSize: "11px",
-            color: "var(--text-secondary, #64748b)",
-            marginTop: "3px",
-          }}
-        >
+        <div style={{ fontSize: "11px", color: "#64748b", marginTop: "3px" }}>
           {patient.disease || patient.diagnosis || "—"} · Age {patient.age}
         </div>
         <div
@@ -238,6 +335,122 @@ function BedCard({ bedNumber, patient, onClick }) {
           />
           {c.label}
         </div>
+        {/* NEW: Show discharge status if patient is discharged */}
+        {patient.is_discharged && (
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "4px",
+              fontSize: "9px",
+              fontWeight: 500,
+              borderRadius: "20px",
+              padding: "2px 8px",
+              background: "#f1f5f9",
+              color: "#64748b",
+              marginTop: "3px",
+              marginLeft: "4px",
+            }}
+          >
+            <span
+              style={{
+                width: "6px",
+                height: "6px",
+                borderRadius: "50%",
+                background: "#94a3b8",
+                display: "inline-block",
+              }}
+            />
+            Discharged
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Corridor ─────────────────────────────────────────────────────────────────
+
+function Corridor() {
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: "4px",
+      }}
+    >
+      <div style={{ width: "1px", flex: 1, background: "#e2e8f0" }} />
+      <div
+        style={{
+          width: "5px",
+          height: "5px",
+          borderRadius: "50%",
+          background: "#e2e8f0",
+        }}
+      />
+      <div style={{ width: "1px", flex: 1, background: "#e2e8f0" }} />
+    </div>
+  );
+}
+
+// ─── Legend ───────────────────────────────────────────────────────────────────
+
+function Legend() {
+  return (
+    <div
+      style={{
+        display: "flex",
+        gap: "16px",
+        flexWrap: "wrap",
+        marginBottom: "20px",
+        paddingBottom: "16px",
+        borderBottom: "0.5px solid #e2e8f0",
+        alignItems: "center",
+      }}
+    >
+      <span
+        style={{
+          fontSize: "10px",
+          fontWeight: 500,
+          color: "#94a3b8",
+          textTransform: "uppercase",
+          letterSpacing: "0.07em",
+        }}
+      >
+        Status
+      </span>
+      {Object.entries(CONDITION_CONFIG).map(([key, { dot, label }]) => (
+        <div
+          key={key}
+          style={{ display: "flex", alignItems: "center", gap: "5px" }}
+        >
+          <span
+            style={{
+              width: "8px",
+              height: "8px",
+              borderRadius: "50%",
+              background: dot,
+              display: "inline-block",
+            }}
+          />
+          <span style={{ fontSize: "12px", color: "#64748b" }}>{label}</span>
+        </div>
+      ))}
+      {/* NEW: Discharged indicator */}
+      <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+        <span
+          style={{
+            width: "8px",
+            height: "8px",
+            borderRadius: "50%",
+            background: "#94a3b8",
+            display: "inline-block",
+          }}
+        />
+        <span style={{ fontSize: "12px", color: "#64748b" }}>Discharged</span>
       </div>
     </div>
   );
@@ -278,8 +491,8 @@ function PatientModal({ patient, onClose }) {
       >
         <div
           style={{
-            background: c.fill,
-            borderBottom: `2px solid ${c.dot}`,
+            background: patient.is_discharged ? "#f1f5f9" : c.fill,
+            borderBottom: `2px solid ${patient.is_discharged ? "#94a3b8" : c.dot}`,
             padding: "20px 24px 16px",
           }}
         >
@@ -296,7 +509,7 @@ function PatientModal({ patient, onClose }) {
                   width: "44px",
                   height: "44px",
                   borderRadius: "50%",
-                  background: c.dot,
+                  background: patient.is_discharged ? "#94a3b8" : c.dot,
                   color: "#fff",
                   display: "flex",
                   alignItems: "center",
@@ -354,11 +567,11 @@ function PatientModal({ patient, onClose }) {
               fontWeight: 600,
               textTransform: "uppercase",
               letterSpacing: "0.06em",
-              color: c.text,
+              color: patient.is_discharged ? "#64748b" : c.text,
               background: "#fff",
               borderRadius: "20px",
               padding: "3px 10px",
-              border: `1px solid ${c.dot}`,
+              border: `1px solid ${patient.is_discharged ? "#94a3b8" : c.dot}`,
             }}
           >
             <span
@@ -366,11 +579,11 @@ function PatientModal({ patient, onClose }) {
                 width: "7px",
                 height: "7px",
                 borderRadius: "50%",
-                background: c.dot,
+                background: patient.is_discharged ? "#94a3b8" : c.dot,
                 display: "inline-block",
               }}
             />
-            {c.label}
+            {patient.is_discharged ? "Discharged" : c.label}
           </div>
         </div>
 
@@ -389,6 +602,18 @@ function PatientModal({ patient, onClose }) {
             ["Gender", patient.gender],
             ["Disease", patient.disease || patient.diagnosis || "—"],
             ["Device", patient.assigned_device || "—"],
+            // NEW: Show discharge information if available
+            ...(patient.is_discharged
+              ? [
+                  [
+                    "Discharged At",
+                    patient.discharged_at
+                      ? new Date(patient.discharged_at).toLocaleDateString()
+                      : "—",
+                  ],
+                  ["Discharge Reason", patient.discharge_reason || "—"],
+                ]
+              : []),
           ].map(([lbl, val]) => (
             <div
               key={lbl}
@@ -424,68 +649,30 @@ function PatientModal({ patient, onClose }) {
   );
 }
 
-// ─── Legend ───────────────────────────────────────────────────────────────────
-
-function Legend() {
-  return (
-    <div
-      style={{
-        display: "flex",
-        gap: "16px",
-        flexWrap: "wrap",
-        marginBottom: "20px",
-        paddingBottom: "16px",
-        borderBottom: "0.5px solid #e2e8f0",
-        alignItems: "center",
-      }}
-    >
-      <span
-        style={{
-          fontSize: "10px",
-          fontWeight: 500,
-          color: "#94a3b8",
-          textTransform: "uppercase",
-          letterSpacing: "0.07em",
-        }}
-      >
-        Status
-      </span>
-      {Object.entries(CONDITION_CONFIG).map(([key, { dot, label }]) => (
-        <div
-          key={key}
-          style={{ display: "flex", alignItems: "center", gap: "5px" }}
-        >
-          <span
-            style={{
-              width: "8px",
-              height: "8px",
-              borderRadius: "50%",
-              background: dot,
-              display: "inline-block",
-            }}
-          />
-          <span style={{ fontSize: "12px", color: "#64748b" }}>{label}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 // ─── WardPanel ────────────────────────────────────────────────────────────────
 
 function WardPanel({ wardName, wardPatients, onSelectPatient }) {
-  const bedMap = buildBedMap(wardPatients);
-  const total = totalBeds(bedMap);
-  const occupied = wardPatients.length;
-  const empty = total - occupied;
-  const critical = wardPatients.filter(
-    (p) => p.condition === "critical",
-  ).length;
+  const [filter, setFilter] = useState("all");
 
-  const rows = [];
-  for (let i = 1; i <= total; i += 2) {
-    rows.push([i, i + 1]);
-  }
+  const bedMap = buildBedMap(wardPatients);
+  const occupied = wardPatients.filter((p) => !p.is_discharged).length;
+  const discharged = wardPatients.filter((p) => p.is_discharged).length;
+  const critical = wardPatients.filter(
+    (p) => p.condition === "critical" && !p.is_discharged,
+  ).length;
+  const empty = 10 - wardPatients.length;
+
+  const rows = [
+    [1, 2],
+    [3, 4],
+    [5, 6],
+    [7, 8],
+    [9, 10],
+  ];
+
+  const visibleRows = rows.filter(
+    ([l, r]) => bedVisible(l, bedMap, filter) || bedVisible(r, bedMap, filter),
+  );
 
   return (
     <div
@@ -497,6 +684,7 @@ function WardPanel({ wardName, wardPatients, onSelectPatient }) {
         border: "0.5px solid #e2e8f0",
       }}
     >
+      {/* Header */}
       <div
         style={{
           background: "#1e40af",
@@ -528,6 +716,7 @@ function WardPanel({ wardName, wardPatients, onSelectPatient }) {
         <div style={{ display: "flex", gap: "24px" }}>
           {[
             { label: "Occupied", value: occupied, color: "#93c5fd" },
+            { label: "Discharged", value: discharged, color: "#94a3b8" },
             { label: "Empty", value: empty, color: "rgba(255,255,255,0.35)" },
             { label: "Critical", value: critical, color: "#fca5a5" },
           ].map(({ label, value, color }) => (
@@ -550,9 +739,12 @@ function WardPanel({ wardName, wardPatients, onSelectPatient }) {
         </div>
       </div>
 
+      {/* Body */}
       <div style={{ padding: "20px 24px 28px" }}>
         <Legend />
+        <FilterChips active={filter} onChange={setFilter} />
 
+        {/* Side labels */}
         <div
           style={{
             display: "grid",
@@ -586,50 +778,59 @@ function WardPanel({ wardName, wardPatients, onSelectPatient }) {
           </div>
         </div>
 
-        {rows.map(([leftN, rightN], ri) => (
+        {/* Bed rows */}
+        {visibleRows.length === 0 ? (
           <div
-            key={ri}
             style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 40px 1fr",
-              marginBottom: "14px",
-              alignItems: "stretch",
+              textAlign: "center",
+              padding: "32px 0",
+              fontSize: "13px",
+              color: "#94a3b8",
             }}
           >
-            <BedCard
-              bedNumber={leftN}
-              patient={bedMap[String(leftN)] ?? null}
-              onClick={onSelectPatient}
-            />
-
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "4px",
-              }}
-            >
-              <div style={{ width: "1px", flex: 1, background: "#e2e8f0" }} />
-              <div
-                style={{
-                  width: "5px",
-                  height: "5px",
-                  borderRadius: "50%",
-                  background: "#e2e8f0",
-                }}
-              />
-              <div style={{ width: "1px", flex: 1, background: "#e2e8f0" }} />
-            </div>
-
-            <BedCard
-              bedNumber={rightN}
-              patient={bedMap[String(rightN)] ?? null}
-              onClick={onSelectPatient}
-            />
+            No beds match this filter.
           </div>
-        ))}
+        ) : (
+          visibleRows.map(([leftN, rightN]) => {
+            const showL = bedVisible(leftN, bedMap, filter);
+            const showR = bedVisible(rightN, bedMap, filter);
+            return (
+              <div
+                key={leftN}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 40px 1fr",
+                  marginBottom: "14px",
+                  alignItems: "stretch",
+                }}
+              >
+                <div>
+                  {showL ? (
+                    <BedCard
+                      bedNumber={leftN}
+                      patient={bedMap[String(leftN)] ?? null}
+                      onClick={onSelectPatient}
+                    />
+                  ) : (
+                    <div style={{ minHeight: "86px" }} />
+                  )}
+                </div>
+                <Corridor />
+                <div>
+                  {showR ? (
+                    <BedCard
+                      bedNumber={rightN}
+                      patient={bedMap[String(rightN)] ?? null}
+                      onClick={onSelectPatient}
+                    />
+                  ) : (
+                    <div style={{ minHeight: "86px" }} />
+                  )}
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
     </div>
   );
@@ -643,6 +844,7 @@ export default function Wards() {
   const [error, setError] = useState(null);
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [activeWard, setActiveWard] = useState(null);
+  const [showDischarged, setShowDischarged] = useState(true); // NEW: Show all by default
 
   useEffect(() => {
     let cancelled = false;
@@ -650,14 +852,18 @@ export default function Wards() {
       setLoading(true);
       setError(null);
       try {
-        const { data } = await client.get("/patients/?is_discharged=false");
+        // MODIFIED: Get ALL patients including discharged and archived
+        const { data } = await client.get("/patients/?include_archived=true");
         if (!cancelled) {
           const list = Array.isArray(data) ? data : (data.results ?? []);
+          console.log("Total patients loaded:", list.length); // Debug log
           setPatients(list);
         }
-      } catch {
-        if (!cancelled)
+      } catch (error) {
+        if (!cancelled) {
+          console.error("Failed to load patients:", error);
           setError("Could not load patient data. Please try again.");
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -668,16 +874,23 @@ export default function Wards() {
     };
   }, []);
 
-  const wardMap = groupByWard(patients);
+  // Filter patients based on toggle
+  const filteredPatients = showDischarged
+    ? patients
+    : patients.filter((p) => !p.is_discharged);
+
+  const wardMap = groupByWard(filteredPatients);
   const wardNames = Object.keys(wardMap).sort();
 
   useEffect(() => {
     if (wardNames.length && activeWard === null) setActiveWard(wardNames[0]);
   }, [wardNames.join(",")]);
 
-  const activeCount = patients.filter(
-    (p) => !p.is_discharged && !p.is_archived,
-  ).length;
+  const totalPatients = patients.length;
+  const activeCount = patients.filter((p) => !p.is_discharged).length;
+  const dischargedCount = patients.filter((p) => p.is_discharged).length;
+  const archivedCount = patients.filter((p) => p.is_archived).length;
+
   const visibleWards = activeWard
     ? wardNames.filter((w) => w === activeWard)
     : wardNames;
@@ -721,20 +934,67 @@ export default function Wards() {
         minHeight: "100vh",
       }}
     >
-      <h1
+      <div
         style={{
-          margin: "0 0 4px",
-          fontSize: "22px",
-          fontWeight: 800,
-          color: "#0f172a",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          flexWrap: "wrap",
+          gap: "16px",
         }}
       >
-        Ward Bed Layout
-      </h1>
-      <p style={{ margin: "0 0 20px", fontSize: "13px", color: "#64748b" }}>
-        {activeCount} active patient{activeCount !== 1 ? "s" : ""} across{" "}
-        {wardNames.length} ward{wardNames.length !== 1 ? "s" : ""}
-      </p>
+        <div>
+          <h1
+            style={{
+              margin: "0 0 4px",
+              fontSize: "22px",
+              fontWeight: 800,
+              color: "#0f172a",
+            }}
+          >
+            Ward Bed Layout
+          </h1>
+          <p style={{ margin: "0 0 20px", fontSize: "13px", color: "#64748b" }}>
+            {totalPatients} total patients ({activeCount} active,{" "}
+            {dischargedCount} discharged, {archivedCount} archived) across{" "}
+            {wardNames.length} ward{wardNames.length !== 1 ? "s" : ""}
+          </p>
+        </div>
+
+        {/* NEW: Toggle to show/hide discharged patients */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "12px",
+            background: "#fff",
+            padding: "8px 16px",
+            borderRadius: "8px",
+            border: "1px solid #e2e8f0",
+          }}
+        >
+          <label
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              cursor: "pointer",
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={showDischarged}
+              onChange={(e) => setShowDischarged(e.target.checked)}
+              style={{ cursor: "pointer" }}
+            />
+            <span
+              style={{ fontSize: "13px", color: "#64748b", fontWeight: 500 }}
+            >
+              Show discharged patients
+            </span>
+          </label>
+        </div>
+      </div>
 
       {wardNames.length > 1 && (
         <div
@@ -769,9 +1029,7 @@ export default function Wards() {
       )}
 
       {wardNames.length === 0 ? (
-        <p style={{ color: "#94a3b8", fontSize: "14px" }}>
-          No active patients found.
-        </p>
+        <p style={{ color: "#94a3b8", fontSize: "14px" }}>No patients found.</p>
       ) : (
         visibleWards.map((w) => (
           <WardPanel
