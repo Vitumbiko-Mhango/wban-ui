@@ -10,6 +10,7 @@
 
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { Search } from "lucide-react";
+import { useSearchParams } from "react-router";
 import Heading from "../../components/common/Heading";
 import client from "../../api/client";
 
@@ -20,7 +21,8 @@ const SEVERITY_STYLES = {
   resolved: { badge: "bg-success-a20 text-success-a10" },
 };
 
-const FILTERS = ["all", "critical", "warning", "normal"];
+const FILTERS = ["all", "critical", "warning", "normal", "resolved"];
+const STATUS_FILTERS = ["all", "unresolved", "resolved"];
 
 // Format an alert from the backend into what the UI expects
 const normalize = (a) => ({
@@ -40,9 +42,17 @@ const normalize = (a) => ({
 });
 
 const Alerts = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialSeverity = searchParams.get("severity");
+  const initialStatus = searchParams.get("status");
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState("all");
+  const [filter, setFilter] = useState(
+    FILTERS.includes(initialSeverity) ? initialSeverity : "all",
+  );
+  const [statusFilter, setStatusFilter] = useState(
+    STATUS_FILTERS.includes(initialStatus) ? initialStatus : "all",
+  );
   const [search, setSearch] = useState("");
 
   const fetchAlerts = useCallback(async () => {
@@ -63,6 +73,13 @@ const Alerts = () => {
     return () => clearInterval(interval);
   }, [fetchAlerts]);
 
+  useEffect(() => {
+    const next = {};
+    if (filter !== "all") next.severity = filter;
+    if (statusFilter !== "all") next.status = statusFilter;
+    setSearchParams(next, { replace: true });
+  }, [filter, statusFilter, setSearchParams]);
+
   const stats = useMemo(
     () => ({
       critical: alerts.filter((a) => a.severity === "critical").length,
@@ -77,15 +94,19 @@ const Alerts = () => {
     () =>
       alerts.filter((a) => {
         const matchFilter = filter === "all" || a.severity === filter;
+        const matchStatus =
+          statusFilter === "all" ||
+          (statusFilter === "unresolved" && !a.is_resolved) ||
+          (statusFilter === "resolved" && a.is_resolved);
         const q = search.toLowerCase();
         const matchSearch =
           !q ||
           a.patient.toLowerCase().includes(q) ||
           a.message.toLowerCase().includes(q) ||
           a.ward.toLowerCase().includes(q);
-        return matchFilter && matchSearch;
+        return matchFilter && matchStatus && matchSearch;
       }),
-    [alerts, filter, search],
+    [alerts, filter, search, statusFilter],
   );
 
   const handleAcknowledge = async (id) => {
@@ -120,23 +141,47 @@ const Alerts = () => {
             label: "Critical alerts",
             value: stats.critical,
             color: "text-danger-a10",
+            severity: "critical",
+            status: "unresolved",
           },
           {
             label: "Warnings",
             value: stats.warning,
             color: "text-warning-a10",
+            severity: "warning",
+            status: "unresolved",
           },
-          { label: "Normal", value: stats.normal, color: "text-primary-a20" },
+          {
+            label: "Normal",
+            value: stats.normal,
+            color: "text-primary-a20",
+            severity: "normal",
+            status: "unresolved",
+          },
           {
             label: "Resolved today",
             value: stats.resolved,
             color: "text-success-a10",
+            severity: "resolved",
+            status: "resolved",
           },
         ].map((s) => (
-          <div key={s.label} className="bg-surface-a20 rounded-lg p-4">
+          <button
+            key={s.label}
+            type="button"
+            onClick={() => {
+              setFilter(s.severity);
+              setStatusFilter(s.status);
+            }}
+            className={`bg-surface-a20 rounded-lg p-4 text-left transition-all duration-150 cursor-pointer hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary-a20/30 ${
+              filter === s.severity && statusFilter === s.status
+                ? "ring-1 ring-primary-a20/30 border border-primary-a20/30"
+                : "border border-transparent"
+            }`}
+          >
             <p className="text-xs text-dark-a0/50 mb-1">{s.label}</p>
             <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
-          </div>
+          </button>
         ))}
       </div>
 
@@ -158,6 +203,20 @@ const Alerts = () => {
             onClick={() => setFilter(f)}
             className={`text-sm px-3 py-2 rounded-md border transition-colors duration-150 capitalize cursor-pointer ${
               filter === f
+                ? "bg-primary-a20/10 font-medium text-primary-a20 border-primary-a20/30"
+                : "bg-transparent text-dark-a0/60 border-surface-a30 hover:bg-surface-a20"
+            }`}
+          >
+            {f}
+          </button>
+        ))}
+        <span className="h-6 w-px bg-surface-a30 mx-1" />
+        {STATUS_FILTERS.map((f) => (
+          <button
+            key={f}
+            onClick={() => setStatusFilter(f)}
+            className={`text-sm px-3 py-2 rounded-md border transition-colors duration-150 capitalize cursor-pointer ${
+              statusFilter === f
                 ? "bg-primary-a20/10 font-medium text-primary-a20 border-primary-a20/30"
                 : "bg-transparent text-dark-a0/60 border-surface-a30 hover:bg-surface-a20"
             }`}

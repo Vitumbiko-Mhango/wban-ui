@@ -57,6 +57,7 @@ const PatientDetails = ({ closeForm, patient }) => {
   const bedNumber = patient.bed || patient.bed_number || "—";
   const ward = patient.ward || "—";
   const condition = patient.condition || patient.status || "—";
+  const disease = patient.disease || patient.diagnosis || "—";
   const assignedDevice =
     patient.assignedDevice || patient.assigned_device || "—";
   const admittedDate = patient.created_at
@@ -121,6 +122,15 @@ const PatientDetails = ({ closeForm, patient }) => {
                   Condition:{" "}
                   <span className="text-dark-a0/80 font-medium capitalize">
                     {condition}
+                  </span>
+                </p>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-dark-a0/60">
+                <User className="size-4 text-dark-a0/60 inline-block" />
+                <p>
+                  Disease:{" "}
+                  <span className="text-dark-a0/80 font-medium">
+                    {disease}
                   </span>
                 </p>
               </div>

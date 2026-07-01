@@ -27,76 +27,60 @@ import {
 import DashboardCard from "../../components/DashboardCard";
 import Button from "../../components/common/Button";
 import Heading from "../../components/common/Heading";
+import client from "../../api/client";
 
-const FALLBACK_ANALYTICS = {
+const EMPTY_ANALYTICS = {
   patients: {
-    total: 24,
-    active: 18,
-    discharged: 6,
-    by_ward: [
-      { ward: "ICU", count: 4 },
-      { ward: "Cardiology", count: 5 },
-      { ward: "Neurology", count: 3 },
-      { ward: "Orthopedics", count: 6 },
-      { ward: "Ward 3", count: 6 },
-    ],
-    by_gender: [
-      { gender: "male", count: 14 },
-      { gender: "female", count: 10 },
-    ],
+    total: 0,
+    active: 0,
+    discharged: 0,
+    critical: 0,
+    warning: 0,
+    stable: 0,
+    by_ward: [],
+    by_gender: [],
   },
   readings: {
-    avg_heart_rate: 82.4,
-    avg_temperature: 37.1,
-    avg_spo2: 96.8,
-    falls_today: 1,
+    avg_heart_rate: 0,
+    avg_temperature: 0,
+    avg_spo2: 0,
+    falls_today: 0,
   },
   alerts: {
-    total_last_30_days: 52,
-    by_type: [
-      { type: "heart_rate", count: 14 },
-      { type: "temperature", count: 9 },
-      { type: "spo2", count: 12 },
-      { type: "stress", count: 10 },
-      { type: "fall", count: 7 },
-    ],
-    by_severity: [
-      { severity: "critical", count: 8 },
-      { severity: "warning", count: 24 },
-      { severity: "normal", count: 20 },
-    ],
+    total: 0,
+    unresolved: 0,
+    resolved: 0,
+    critical: 0,
+    warning: 0,
+    normal: 0,
+    by_type: [],
+    by_severity: [],
   },
   devices: {
-    online: 6,
-    offline: 3,
+    total: 0,
+    online: 0,
+    offline: 0,
+    faulty: 0,
   },
-  daily_readings: [
-    { date: "2026-06-17", count: 118 },
-    { date: "2026-06-18", count: 132 },
-    { date: "2026-06-19", count: 126 },
-    { date: "2026-06-20", count: 148 },
-    { date: "2026-06-21", count: 139 },
-    { date: "2026-06-22", count: 154 },
-    { date: "2026-06-23", count: 142 },
-  ],
-  daily_alerts: [
-    { date: "2026-06-17", count: 6 },
-    { date: "2026-06-18", count: 9 },
-    { date: "2026-06-19", count: 5 },
-    { date: "2026-06-20", count: 11 },
-    { date: "2026-06-21", count: 7 },
-    { date: "2026-06-22", count: 8 },
-    { date: "2026-06-23", count: 6 },
-  ],
+  daily_readings: [],
+  daily_alerts: [],
 };
 
-const TYPE_COLORS = ["#1e2ac1", "#f59e0b", "#3b82f6", "#22c55e", "#ef4444"];
+const TYPE_COLORS = ["#0f766e", "#2563eb", "#0891b2", "#16a34a", "#dc2626"];
 const SEVERITY_COLORS = {
-  critical: "#ef4444",
-  warning: "#f59e0b",
-  normal: "#22c55e",
+  critical: "#dc2626",
+  warning: "#d97706",
+  normal: "#16a34a",
 };
-const GENDER_COLORS = ["#1e2ac1", "#22c55e", "#f59e0b"];
+const GENDER_COLORS = ["#2563eb", "#0f766e", "#d97706"];
+const CHART_COLORS = {
+  primary: "#0f766e",
+  secondary: "#2563eb",
+  success: "#16a34a",
+  warning: "#d97706",
+  danger: "#dc2626",
+  grid: "#d8e5e1",
+};
 
 const formatLabel = (value = "") =>
   value.replaceAll("_", " ").replace(/\b\w/g, (char) => char.toUpperCase());
@@ -108,11 +92,20 @@ const shortDate = (value) => {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 };
 
-const ChartPanel = ({ title, children }) => (
-  <section className="rounded-lg border border-surface-a30 bg-white p-4 shadow-sm">
-    <h2 className="mb-4 text-sm font-bold text-dark-a0">{title}</h2>
+const ChartPanel = ({ title, subtitle, children }) => (
+  <section className="rounded-lg border border-surface-a30 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
+    <div className="mb-4 border-l-4 border-primary-a20 pl-3">
+      <h2 className="text-sm font-bold text-dark-a0">{title}</h2>
+      {subtitle && <p className="mt-0.5 text-xs text-dark-a0/45">{subtitle}</p>}
+    </div>
     <div className="h-72">{children}</div>
   </section>
+);
+
+const EmptyChart = ({ message = "No data available yet." }) => (
+  <div className="flex h-full items-center justify-center rounded-md border border-dashed border-surface-a30 bg-surface-a10 text-sm text-dark-a0/45">
+    {message}
+  </div>
 );
 
 const renderSliceLabel = ({
@@ -121,7 +114,6 @@ const renderSliceLabel = ({
   midAngle,
   innerRadius,
   outerRadius,
-  name,
   payload,
   value,
   activeName,
@@ -131,7 +123,7 @@ const renderSliceLabel = ({
   const radius = innerRadius + (outerRadius - innerRadius) * 0.55;
   const x = cx + radius * Math.cos((-midAngle * Math.PI) / 180);
   const y = cy + radius * Math.sin((-midAngle * Math.PI) / 180);
-  const sliceName = name || payload?.name;
+  const sliceName = payload?.name;
   const isActive = activeName === sliceName;
   const isDimmed = activeName && !isActive;
 
@@ -146,7 +138,7 @@ const renderSliceLabel = ({
       fontWeight={isActive ? 800 : 700}
       opacity={isDimmed ? 0.45 : 1}
     >
-      {value}
+      {payload?.percent ?? 0}%
     </text>
   );
 };
@@ -184,7 +176,10 @@ const InteractivePieChart = ({
   onActiveNameChange,
   innerRadius = 0,
   outerRadius = 90,
-}) => (
+}) => {
+  if (!data.length) return <EmptyChart />;
+
+  return (
   <ResponsiveContainer width="100%" height="100%">
     <PieChart>
       <Pie
@@ -225,10 +220,11 @@ const InteractivePieChart = ({
       />
     </PieChart>
   </ResponsiveContainer>
-);
+  );
+};
 
 const VitalsCard = ({ label, value, unit, Icon, iconClass }) => (
-  <div className="rounded-lg border border-surface-a30 bg-white p-4 shadow-sm">
+  <div className="rounded-lg border border-surface-a30 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
     <div className="flex items-center justify-between gap-3">
       <div>
         <p className="text-xs font-medium text-dark-a0/50">{label}</p>
@@ -242,8 +238,20 @@ const VitalsCard = ({ label, value, unit, Icon, iconClass }) => (
   </div>
 );
 
-const Analytics = () => {
-  const [analytics, setAnalytics] = useState(FALLBACK_ANALYTICS);
+const withPercent = (items) => {
+  const total = items.reduce((sum, item) => sum + Number(item.value || 0), 0);
+  return items.map((item) => ({
+    ...item,
+    percent: total ? Math.round((Number(item.value || 0) / total) * 100) : 0,
+  }));
+};
+
+const Analytics = ({
+  title = "Analytics & Reports",
+  subtitle = "Patient statistics, alert trends, vitals averages and exportable reports.",
+  dashboardLinks = {},
+}) => {
+  const [analytics, setAnalytics] = useState(EMPTY_ANALYTICS);
   const [summary, setSummary] = useState(null);
   const [exportOpen, setExportOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -253,40 +261,23 @@ const Analytics = () => {
   const [activeSeveritySlice, setActiveSeveritySlice] = useState(null);
   const [activeGenderSlice, setActiveGenderSlice] = useState(null);
 
-  const token =
-    localStorage.getItem("token") ||
-    localStorage.getItem("access") ||
-    localStorage.getItem("access_token") ||
-    "";
-
   const fetchAnalytics = useCallback(async () => {
     setIsRefreshing(true);
     setError("");
 
     try {
       const [analyticsResponse, statsResponse] = await Promise.all([
-        fetch("/api/analytics/"),
-        fetch("/api/dashboard/stats/"),
+        client.get("/analytics/"),
+        client.get("/dashboard/stats/"),
       ]);
 
-      if (analyticsResponse.ok) {
-        const data = await analyticsResponse.json();
-        setAnalytics({ ...FALLBACK_ANALYTICS, ...data });
-      }
-
-      if (statsResponse.ok) {
-        setSummary(await statsResponse.json());
-      }
-
-      if (!analyticsResponse.ok && !statsResponse.ok) {
-        throw new Error("Unable to refresh analytics.");
-      }
-
+      setAnalytics({ ...EMPTY_ANALYTICS, ...analyticsResponse.data });
+      setSummary(statsResponse.data);
       setLastUpdated(new Date());
     } catch {
-      setAnalytics(FALLBACK_ANALYTICS);
-      setLastUpdated(new Date());
-      setError("Showing sample analytics until the backend is available.");
+      setAnalytics(EMPTY_ANALYTICS);
+      setSummary(null);
+      setError("Could not load live analytics from the backend.");
     } finally {
       setIsRefreshing(false);
     }
@@ -306,40 +297,49 @@ const Analytics = () => {
         analytics.alerts?.total_last_30_days ??
         analytics.daily_alerts?.reduce((sum, item) => sum + Number(item.count || 0), 0) ??
         0,
-      devicesOnline: summary?.devices_online ?? analytics.devices?.online ?? 0,
+      devicesOnline:
+        summary?.active_monitors ??
+        summary?.devices_online ??
+        analytics.devices?.online ??
+        0,
+      totalDevices: summary?.total_devices ?? analytics.devices?.total ?? 0,
     }),
     [analytics, summary],
   );
 
-  const typeData = (analytics.alerts?.by_type || []).map((item) => ({
-    name: formatLabel(item.type),
-    value: item.count,
-  }));
+  const typeData = withPercent(
+    (analytics.alerts?.by_type || []).map((item) => ({
+      name: formatLabel(item.type),
+      value: item.count,
+    })),
+  );
 
-  const severityData = (analytics.alerts?.by_severity || []).map((item) => ({
-    name: formatLabel(item.severity),
-    value: item.count,
-    severity: item.severity,
-  }));
+  const severityData = withPercent(
+    (analytics.alerts?.by_severity || []).map((item) => ({
+      name: formatLabel(item.severity),
+      value: item.count,
+      severity: item.severity,
+    })),
+  );
 
-  const genderData = (analytics.patients?.by_gender || []).map((item) => ({
-    name: formatLabel(item.gender),
-    value: item.count,
-  }));
+  const genderData = withPercent(
+    (analytics.patients?.by_gender || []).map((item) => ({
+      name: formatLabel(item.gender),
+      value: item.count,
+    })),
+  );
 
   const exportOptions = [
-    { label: "Export Patients CSV", url: "/api/export/patients/csv/", filename: "patients.csv" },
-    { label: "Export Patients PDF", url: "/api/export/patients/pdf/", filename: "patients.pdf" },
-    { label: "Export Alerts CSV", url: "/api/export/alerts/csv/", filename: "alerts.csv" },
-    { label: "Export Alerts PDF", url: "/api/export/alerts/pdf/", filename: "alerts.pdf" },
+    { label: "Export Patients CSV", url: "/export/patients/csv/", filename: "patients.csv" },
+    { label: "Export Patients PDF", url: "/export/patients/pdf/", filename: "patients.pdf" },
+    { label: "Export Alerts CSV", url: "/export/alerts/csv/", filename: "alerts.csv" },
+    { label: "Export Alerts PDF", url: "/export/alerts/pdf/", filename: "alerts.pdf" },
   ];
 
   const handleExport = async (url, filename) => {
     setExportOpen(false);
-    const response = await fetch(url, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
-    const blob = await response.blob();
+    const response = await client.get(url, { responseType: "blob" });
+    const blob = response.data;
     const link = document.createElement("a");
     const objectUrl = URL.createObjectURL(blob);
     link.href = objectUrl;
@@ -353,8 +353,8 @@ const Analytics = () => {
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
           <Heading
-            title="Analytics & Reports"
-            subtitle="Patient statistics, alert trends, vitals averages and exportable reports."
+            title={title}
+            subtitle={subtitle}
           />
           <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-dark-a0/50">
             <span>
@@ -405,51 +405,74 @@ const Analytics = () => {
       )}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <DashboardCard title="Total Patients" total={stats.totalPatients} Icon={Users} />
+        <DashboardCard
+          title="Total Patients"
+          total={stats.totalPatients}
+          Icon={Users}
+          iconClass="text-teal-700 bg-teal-50"
+          subtitle="Open patient registry"
+          to={dashboardLinks.totalPatients}
+        />
         <DashboardCard
           title="Active Patients"
           total={stats.activePatients}
           Icon={Activity}
-          iconClass="text-success-a10"
+          iconClass="text-emerald-700 bg-emerald-50"
+          subtitle="Currently admitted"
+          to={dashboardLinks.activePatients}
         />
         <DashboardCard
           title="Total Alerts (Last 30 Days)"
           total={stats.totalAlerts}
           Icon={AlertTriangle}
-          iconClass="text-warning-a10"
+          iconClass="text-amber-700 bg-amber-50"
+          subtitle="Review alert activity"
+          to={dashboardLinks.alerts}
         />
         <DashboardCard
           title="Devices Online"
-          total={stats.devicesOnline}
+          total={
+            stats.totalDevices
+              ? `${stats.devicesOnline}/${stats.totalDevices}`
+              : stats.devicesOnline
+          }
           Icon={Wifi}
-          iconClass="text-primary-a20"
+          iconClass="text-blue-700 bg-blue-50"
+          subtitle="Monitor availability"
+          to={dashboardLinks.devices}
         />
       </div>
 
       <div className="grid gap-4 xl:grid-cols-2">
-        <ChartPanel title="Daily Readings (Last 7 Days)">
+        <ChartPanel
+          title="Daily Readings"
+          subtitle="Sensor reading volume over the last 7 days"
+        >
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={analytics.daily_readings}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e1e1e1" />
+              <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
               <XAxis dataKey="date" tickFormatter={shortDate} />
               <YAxis />
               <Tooltip labelFormatter={shortDate} />
-              <Bar dataKey="count" fill="#1e2ac1" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="count" fill={CHART_COLORS.primary} radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </ChartPanel>
 
-        <ChartPanel title="Daily Alerts (Last 7 Days)">
+        <ChartPanel
+          title="Daily Alerts"
+          subtitle="Clinical alert volume over the last 7 days"
+        >
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={analytics.daily_alerts}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e1e1e1" />
+              <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
               <XAxis dataKey="date" tickFormatter={shortDate} />
               <YAxis />
               <Tooltip labelFormatter={shortDate} />
               <Line
                 type="monotone"
                 dataKey="count"
-                stroke="#ef4444"
+                stroke={CHART_COLORS.danger}
                 strokeWidth={3}
                 dot={{ r: 4 }}
               />
@@ -459,7 +482,7 @@ const Analytics = () => {
       </div>
 
       <div className="grid gap-4 xl:grid-cols-2">
-        <ChartPanel title="Alerts by Type">
+        <ChartPanel title="Alerts by Type" subtitle="Distribution of triggered alert categories">
           <InteractivePieChart
             data={typeData}
             colors={TYPE_COLORS}
@@ -468,10 +491,10 @@ const Analytics = () => {
           />
         </ChartPanel>
 
-        <ChartPanel title="Alerts by Severity">
+        <ChartPanel title="Alerts by Severity" subtitle="Severity mix with percentage labels">
           <InteractivePieChart
             data={severityData}
-            colors={(entry) => SEVERITY_COLORS[entry.severity] || "#1e2ac1"}
+            colors={(entry) => SEVERITY_COLORS[entry.severity] || CHART_COLORS.primary}
             activeName={activeSeveritySlice}
             onActiveNameChange={setActiveSeveritySlice}
             innerRadius={58}
@@ -511,23 +534,23 @@ const Analytics = () => {
       </div>
 
       <div className="grid gap-4 xl:grid-cols-2">
-        <ChartPanel title="Patients by Ward">
+        <ChartPanel title="Patients by Ward" subtitle="Current ward distribution">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={analytics.patients?.by_ward || []}
               layout="vertical"
               margin={{ left: 20 }}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="#e1e1e1" />
+              <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
               <XAxis type="number" />
               <YAxis type="category" dataKey="ward" width={95} />
               <Tooltip />
-              <Bar dataKey="count" fill="#22c55e" radius={[0, 4, 4, 0]} />
+              <Bar dataKey="count" fill={CHART_COLORS.success} radius={[0, 4, 4, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </ChartPanel>
 
-        <ChartPanel title="Patients by Gender">
+        <ChartPanel title="Patients by Gender" subtitle="Patient demographic split">
           <InteractivePieChart
             data={genderData}
             colors={GENDER_COLORS}

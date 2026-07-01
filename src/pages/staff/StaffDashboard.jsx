@@ -47,24 +47,32 @@ const StaffDashboard = () => {
       total: v("active_patients"),
       icon: Users,
       iconClass: "text-primary-a20 bg-primary-a20/10",
+      to: "/staff/patients?view=active",
+      subtitle: "Open active patient list",
     },
     {
       title: "Active Monitors",
       total: v("active_monitors"),
       icon: Activity,
       iconClass: "text-success-a10 bg-success-a20",
+      to: "/staff/live-monitoring",
+      subtitle: "View live sensor feed",
     },
     {
       title: "Unresolved Alerts",
       total: v("unresolved_alerts"),
       icon: Bell,
       iconClass: "text-warning-a10 bg-warning-a20",
+      to: "/staff/alerts?status=unresolved",
+      subtitle: "Show open alerts",
     },
     {
       title: "Critical Alerts",
       total: v("critical_alerts"),
       icon: ShieldAlert,
       iconClass: "text-danger-a10 bg-danger-a20",
+      to: "/staff/alerts?severity=critical&status=unresolved",
+      subtitle: "Show urgent alerts",
     },
   ];
 
@@ -90,6 +98,8 @@ const StaffDashboard = () => {
             total={c.total}
             Icon={c.icon}
             iconClass={c.iconClass}
+            to={c.to}
+            subtitle={c.subtitle}
           />
         ))}
       </div>

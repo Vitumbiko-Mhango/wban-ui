@@ -6,7 +6,6 @@ import {
   Cpu,
   HeartCrack,
   LayoutDashboard,
-  PieChart,
   Settings,
   Settings2,
   Users,
@@ -33,11 +32,6 @@ const AdminLayout = () => {
       name: "Alert Thresholds",
       icon: Settings2,
       link: "/admin/thresholds",
-    },
-    {
-      name: "Analytics",
-      icon: PieChart,
-      link: "/admin/analytics",
     },
     {
       name: "Users",

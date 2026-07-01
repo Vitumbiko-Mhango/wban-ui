@@ -17,9 +17,9 @@ const schema = z.object({
   gender: z.string(),
   ward: z.string().min(1, "Ward is required"),
   bed: z.string().min(1, "Bed is required"),
+  disease: z.string().min(1, "Disease is required"),
   device_id: z.string().optional(),
   device_name: z.string().optional(),
-  condition: z.string().min(2, "Condition is required"),
   status: z.string(),
   notes: z.string().optional(),
 });
@@ -59,9 +59,9 @@ const PatientForm = ({ closeForm, onSubmit, patient }) => {
       gender: "male",
       ward: "",
       bed: "",
+      disease: "",
       device_id: "",
       device_name: "",
-      condition: "",
       status: "stable",
       notes: "",
     },
@@ -102,9 +102,9 @@ const PatientForm = ({ closeForm, onSubmit, patient }) => {
       gender: patient.gender || "male",
       ward: patient.ward || "",
       bed: patient.bed || "",
+      disease: patient.disease || "",
       device_id: patient.assignedDevice || "",
       device_name: patient.deviceName || "",
-      condition: patient.condition || "",
       status: patient.status || "stable",
       notes: patient.notes || "",
     });
@@ -269,14 +269,14 @@ const PatientForm = ({ closeForm, onSubmit, patient }) => {
           </div>
 
           <div>
-            <label className="label">Condition</label>
+            <label className="label">Disease / Diagnosis</label>
             <input
-              {...register("condition")}
+              {...register("disease")}
               placeholder="e.g. Hypertension"
-              className={`input ${errors.condition ? "input-error" : ""}`}
+              className={`input ${errors.disease ? "input-error" : ""}`}
             />
-            {errors.condition && (
-              <p className="error-text">{errors.condition.message}</p>
+            {errors.disease && (
+              <p className="error-text">{errors.disease.message}</p>
             )}
           </div>
 
