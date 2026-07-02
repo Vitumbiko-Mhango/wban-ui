@@ -83,7 +83,20 @@ const CHART_COLORS = {
 };
 
 const formatLabel = (value = "") =>
-  value.replaceAll("_", " ").replace(/\b\w/g, (char) => char.toUpperCase());
+  String(value)
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+
+const getAlertTypeName = (item) =>
+  item.alert_type_display ||
+  item.alert_type_name ||
+  item.alert_type ||
+  item.type_name ||
+  item.type ||
+  item.name ||
+  item.label ||
+  item.value ||
+  "Unknown Alert";
 
 const shortDate = (value) => {
   if (!value) return "";
@@ -93,7 +106,7 @@ const shortDate = (value) => {
 };
 
 const ChartPanel = ({ title, subtitle, children }) => (
-  <section className="rounded-lg border border-surface-a30 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
+  <section className="rounded-lg border border-surface-a30 bg-surface-a0 p-4 shadow-sm transition-shadow hover:shadow-md">
     <div className="mb-4 border-l-4 border-primary-a20 pl-3">
       <h2 className="text-sm font-bold text-dark-a0">{title}</h2>
       {subtitle && <p className="mt-0.5 text-xs text-dark-a0/45">{subtitle}</p>}
@@ -223,17 +236,19 @@ const InteractivePieChart = ({
   );
 };
 
-const VitalsCard = ({ label, value, unit, Icon, iconClass }) => (
-  <div className="rounded-lg border border-surface-a30 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
+const VitalsCard = ({ label, value, unit, Icon: VitalsIcon, iconClass }) => (
+  <div className="rounded-lg border border-surface-a30 bg-surface-a0 p-3 shadow-sm transition-shadow hover:border-primary-a20/30 hover:shadow-md">
     <div className="flex items-center justify-between gap-3">
-      <div>
+      <div className="min-w-0">
         <p className="text-xs font-medium text-dark-a0/50">{label}</p>
-        <p className="mt-1 text-2xl font-bold text-dark-a0">
+        <p className="mt-1 text-xl font-bold text-dark-a0">
           {value}
           {unit && <span className="ml-1 text-sm font-medium text-dark-a0/45">{unit}</span>}
         </p>
       </div>
-      <Icon className={`size-7 ${iconClass}`} />
+      {React.createElement(VitalsIcon, {
+        className: `size-6 shrink-0 ${iconClass}`,
+      })}
     </div>
   </div>
 );
@@ -249,7 +264,7 @@ const withPercent = (items) => {
 const Analytics = ({
   title = "Analytics & Reports",
   subtitle = "Patient statistics, alert trends, vitals averages and exportable reports.",
-  dashboardLinks = {},
+  dashboardLinks,
 }) => {
   const [analytics, setAnalytics] = useState(EMPTY_ANALYTICS);
   const [summary, setSummary] = useState(null);
@@ -309,7 +324,7 @@ const Analytics = ({
 
   const typeData = withPercent(
     (analytics.alerts?.by_type || []).map((item) => ({
-      name: formatLabel(item.type),
+      name: formatLabel(getAlertTypeName(item)),
       value: item.count,
     })),
   );
@@ -335,6 +350,14 @@ const Analytics = ({
     { label: "Export Alerts CSV", url: "/export/alerts/csv/", filename: "alerts.csv" },
     { label: "Export Alerts PDF", url: "/export/alerts/pdf/", filename: "alerts.pdf" },
   ];
+
+  const cardLinks = {
+    totalPatients: "/staff/patients",
+    activePatients: "/staff/patients?view=active",
+    alerts: "/staff/alerts",
+    devices: "/staff/live-monitoring",
+    ...dashboardLinks,
+  };
 
   const handleExport = async (url, filename) => {
     setExportOpen(false);
@@ -382,7 +405,7 @@ const Analytics = ({
             Export
           </Button>
           {exportOpen && (
-            <div className="absolute right-0 z-20 mt-2 w-56 overflow-hidden rounded-md border border-surface-a30 bg-white shadow-lg">
+            <div className="absolute right-0 z-20 mt-2 w-56 overflow-hidden rounded-md border border-surface-a30 bg-surface-a0 shadow-lg">
               {exportOptions.map((option) => (
                 <button
                   key={option.filename}
@@ -404,30 +427,33 @@ const Analytics = ({
         </div>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <DashboardCard
           title="Total Patients"
           total={stats.totalPatients}
           Icon={Users}
-          iconClass="text-teal-700 bg-teal-50"
-          subtitle="Open patient registry"
-          to={dashboardLinks.totalPatients}
+          iconClass="text-primary-a20 bg-primary-a20/10"
+          subtitle="Open registry"
+          to={cardLinks.totalPatients}
+          compact
         />
         <DashboardCard
           title="Active Patients"
           total={stats.activePatients}
           Icon={Activity}
-          iconClass="text-emerald-700 bg-emerald-50"
+          iconClass="text-success-a10 bg-success-a20"
           subtitle="Currently admitted"
-          to={dashboardLinks.activePatients}
+          to={cardLinks.activePatients}
+          compact
         />
         <DashboardCard
-          title="Total Alerts (Last 30 Days)"
+          title="Alerts 30 Days"
           total={stats.totalAlerts}
           Icon={AlertTriangle}
-          iconClass="text-amber-700 bg-amber-50"
-          subtitle="Review alert activity"
-          to={dashboardLinks.alerts}
+          iconClass="text-warning-a10 bg-warning-a20"
+          subtitle="Review alerts"
+          to={cardLinks.alerts}
+          compact
         />
         <DashboardCard
           title="Devices Online"
@@ -437,9 +463,10 @@ const Analytics = ({
               : stats.devicesOnline
           }
           Icon={Wifi}
-          iconClass="text-blue-700 bg-blue-50"
-          subtitle="Monitor availability"
-          to={dashboardLinks.devices}
+          iconClass="text-info-a10 bg-info-a20"
+          subtitle="Live monitoring"
+          to={cardLinks.devices}
+          compact
         />
       </div>
 
@@ -503,7 +530,7 @@ const Analytics = ({
         </ChartPanel>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <VitalsCard
           label="Average Heart Rate"
           value={analytics.readings?.avg_heart_rate ?? 0}

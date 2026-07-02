@@ -29,6 +29,7 @@ const CHIP_STYLES = {
 };
 
 const FILTERS = ["all", "occupied", "empty", "stable", "warning", "critical"];
+const ALERT_POLL_MS = 10_000;
 
 const FILTER_LABELS = {
   all: "All beds",
@@ -37,6 +38,33 @@ const FILTER_LABELS = {
   stable: "Stable",
   warning: "Warning",
   critical: "Critical",
+};
+
+const UI = {
+  page: "var(--color-surface-a0)",
+  card: "var(--color-surface-a0)",
+  cardAlt: "var(--color-surface-a10)",
+  border: "var(--color-surface-a30)",
+  muted: "color-mix(in srgb, var(--color-dark-a0) 55%, transparent)",
+  faint: "color-mix(in srgb, var(--color-dark-a0) 38%, transparent)",
+  text: "var(--color-dark-a0)",
+  primary: "var(--color-primary-a20)",
+};
+
+const ALERT_BLINK_STYLE_ID = "wban-bed-alert-blink-styles";
+const ALERT_BADGE = {
+  critical: {
+    label: "Critical alert",
+    color: "#dc2626",
+    fill: "#fee2e2",
+    shadow: "rgba(220, 38, 38, 0.45)",
+  },
+  warning: {
+    label: "Warning alert",
+    color: "#ca8a04",
+    fill: "#fef3c7",
+    shadow: "rgba(202, 138, 4, 0.38)",
+  },
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -67,6 +95,68 @@ function bedVisible(bedNum, bedMap, filter) {
   if (filter === "occupied") return !!p;
   if (filter === "empty") return !p;
   return p?.condition === filter;
+}
+
+function normalizeKey(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+}
+
+function getPatientKeys(patient) {
+  if (!patient) return [];
+  const fullName = [patient.first_name, patient.last_name].filter(Boolean).join(" ");
+
+  return [
+    patient.id,
+    patient.patient_id,
+    fullName,
+    `${fullName} ${patient.ward || ""}`,
+  ]
+    .filter(Boolean)
+    .flatMap((value) => [value, normalizeKey(value)]);
+}
+
+function getPatientAlertSeverity(patient, alertMap) {
+  if (!patient) return null;
+
+  for (const key of getPatientKeys(patient)) {
+    const severity = alertMap.get(key);
+    if (severity) return severity;
+  }
+
+  return null;
+}
+
+function buildPatientAlertMap(alerts) {
+  const map = new Map();
+
+  const setSeverity = (key, severity) => {
+    if (!key) return;
+    const normalizedKey = typeof key === "number" ? key : normalizeKey(key);
+    const current = map.get(normalizedKey);
+    if (current === "critical") return;
+    map.set(normalizedKey, severity === "critical" ? "critical" : current || "warning");
+  };
+
+  alerts.forEach((alert) => {
+    if (alert.is_resolved) return;
+    const severity = String(alert.severity || "").toLowerCase();
+    if (severity !== "critical" && severity !== "warning") return;
+
+    const patientId = Number(alert.patient);
+    if (patientId) {
+      setSeverity(patientId, severity);
+      setSeverity(String(patientId), severity);
+    }
+
+    setSeverity(alert.patient_id, severity);
+    setSeverity(alert.patient_name, severity);
+    setSeverity(`${alert.patient_name || ""} ${alert.patient_ward || ""}`, severity);
+  });
+
+  return map;
 }
 
 // ─── BedSVG ───────────────────────────────────────────────────────────────────
@@ -161,7 +251,7 @@ function FilterChips({ active, onChange }) {
         style={{
           fontSize: "11px",
           fontWeight: 500,
-          color: "#94a3b8",
+          color: UI.faint,
           marginRight: "2px",
         }}
       >
@@ -182,9 +272,9 @@ function FilterChips({ active, onChange }) {
               fontWeight: 500,
               borderRadius: "20px",
               padding: "5px 13px",
-              border: `1.5px solid ${isActive ? s.border : "#e2e8f0"}`,
-              background: isActive ? s.bg : "#fff",
-              color: isActive ? s.color : "#64748b",
+              border: `1.5px solid ${isActive ? s.border : UI.border}`,
+              background: isActive ? s.bg : UI.card,
+              color: isActive ? s.color : UI.muted,
               cursor: "pointer",
               transition: "all 0.15s",
               userSelect: "none",
@@ -221,15 +311,15 @@ function FilterChips({ active, onChange }) {
 
 // ─── BedCard ──────────────────────────────────────────────────────────────────
 
-function BedCard({ bedNumber, patient, onClick }) {
+function BedCard({ bedNumber, patient, alertSeverity, onClick }) {
   const [hovered, setHovered] = useState(false);
 
   if (!patient) {
     return (
       <div
         style={{
-          background: "#f8fafc",
-          border: "1.5px dashed #d1d5db",
+          background: UI.cardAlt,
+          border: `1.5px dashed ${UI.border}`,
           borderRadius: "12px",
           padding: "12px 14px",
           minHeight: "86px",
@@ -244,7 +334,7 @@ function BedCard({ bedNumber, patient, onClick }) {
             style={{
               fontSize: "10px",
               fontWeight: 500,
-              color: "#94a3b8",
+              color: UI.faint,
               letterSpacing: "0.07em",
               textTransform: "uppercase",
               marginBottom: "3px",
@@ -252,23 +342,30 @@ function BedCard({ bedNumber, patient, onClick }) {
           >
             Bed {String(bedNumber).padStart(2, "0")}
           </div>
-          <div style={{ fontSize: "12px", color: "#94a3b8" }}>Available</div>
+          <div style={{ fontSize: "12px", color: UI.faint }}>Available</div>
         </div>
       </div>
     );
   }
 
   const c = CONDITION_CONFIG[patient.condition] || CONDITION_CONFIG.stable;
+  const alert = ALERT_BADGE[alertSeverity] || null;
+  const cardBackground = alert ? alert.fill : hovered ? c.fill : UI.card;
+  const borderColor = alert ? alert.color : hovered ? c.dot : UI.border;
 
   return (
     <div
+      className={alert ? `wban-bed-alert-blink wban-bed-alert-${alertSeverity}` : undefined}
       onClick={() => onClick(patient)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        background: hovered ? c.fill : "#ffffff",
-        border: `0.5px solid ${hovered ? c.dot : "#e2e8f0"}`,
-        borderLeft: `3px solid ${c.dot}`,
+        "--bed-alert-color": alert?.color,
+        "--bed-alert-shadow": alert?.shadow,
+        "--bed-alert-fill": alert?.fill,
+        background: cardBackground,
+        border: `1.5px solid ${borderColor}`,
+        borderLeft: `5px solid ${alert?.color || c.dot}`,
         borderRadius: "0 12px 12px 0",
         padding: "12px 14px",
         minHeight: "86px",
@@ -276,16 +373,17 @@ function BedCard({ bedNumber, patient, onClick }) {
         alignItems: "flex-start",
         gap: "10px",
         cursor: "pointer",
-        transition: "background 0.15s, border-color 0.15s",
+        transition: "background 0.15s, border-color 0.15s, box-shadow 0.15s",
+        position: "relative",
       }}
     >
-      <BedSVG color={c.dot} />
+      <BedSVG color={alert?.color || c.dot} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div
           style={{
             fontSize: "10px",
             fontWeight: 500,
-            color: "#94a3b8",
+            color: UI.faint,
             letterSpacing: "0.07em",
             textTransform: "uppercase",
             marginBottom: "3px",
@@ -297,7 +395,7 @@ function BedCard({ bedNumber, patient, onClick }) {
           style={{
             fontSize: "13px",
             fontWeight: 500,
-            color: "#0f172a",
+            color: hovered ? "#0f172a" : UI.text,
             whiteSpace: "nowrap",
             overflow: "hidden",
             textOverflow: "ellipsis",
@@ -305,7 +403,7 @@ function BedCard({ bedNumber, patient, onClick }) {
         >
           {patient.first_name} {patient.last_name}
         </div>
-        <div style={{ fontSize: "11px", color: "#64748b", marginTop: "3px" }}>
+        <div style={{ fontSize: "11px", color: hovered ? "#64748b" : UI.muted, marginTop: "3px" }}>
           {patient.disease || patient.diagnosis || "—"} · Age {patient.age}
         </div>
         <div
@@ -335,6 +433,38 @@ function BedCard({ bedNumber, patient, onClick }) {
           />
           {c.label}
         </div>
+        {alert && (
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "4px",
+              fontSize: "10px",
+              fontWeight: 800,
+              borderRadius: "20px",
+              padding: "2px 8px",
+              textTransform: "uppercase",
+              letterSpacing: "0.05em",
+              background: UI.card,
+              color: alert.color,
+              border: `1px solid ${alert.color}`,
+              marginTop: "5px",
+              marginLeft: "4px",
+            }}
+          >
+            <span
+              className="wban-bed-alert-dot"
+              style={{
+                width: "7px",
+                height: "7px",
+                borderRadius: "50%",
+                background: alert.color,
+                display: "inline-block",
+              }}
+            />
+            {alert.label}
+          </div>
+        )}
         {/* NEW: Show discharge status if patient is discharged */}
         {patient.is_discharged && (
           <div
@@ -346,8 +476,8 @@ function BedCard({ bedNumber, patient, onClick }) {
               fontWeight: 500,
               borderRadius: "20px",
               padding: "2px 8px",
-              background: "#f1f5f9",
-              color: "#64748b",
+              background: UI.cardAlt,
+              color: UI.muted,
               marginTop: "3px",
               marginLeft: "4px",
             }}
@@ -382,16 +512,16 @@ function Corridor() {
         gap: "4px",
       }}
     >
-      <div style={{ width: "1px", flex: 1, background: "#e2e8f0" }} />
+      <div style={{ width: "1px", flex: 1, background: UI.border }} />
       <div
         style={{
           width: "5px",
           height: "5px",
           borderRadius: "50%",
-          background: "#e2e8f0",
+          background: UI.border,
         }}
       />
-      <div style={{ width: "1px", flex: 1, background: "#e2e8f0" }} />
+      <div style={{ width: "1px", flex: 1, background: UI.border }} />
     </div>
   );
 }
@@ -407,7 +537,7 @@ function Legend() {
         flexWrap: "wrap",
         marginBottom: "20px",
         paddingBottom: "16px",
-        borderBottom: "0.5px solid #e2e8f0",
+        borderBottom: `0.5px solid ${UI.border}`,
         alignItems: "center",
       }}
     >
@@ -415,7 +545,7 @@ function Legend() {
         style={{
           fontSize: "10px",
           fontWeight: 500,
-          color: "#94a3b8",
+          color: UI.faint,
           textTransform: "uppercase",
           letterSpacing: "0.07em",
         }}
@@ -436,7 +566,7 @@ function Legend() {
               display: "inline-block",
             }}
           />
-          <span style={{ fontSize: "12px", color: "#64748b" }}>{label}</span>
+          <span style={{ fontSize: "12px", color: UI.muted }}>{label}</span>
         </div>
       ))}
       {/* NEW: Discharged indicator */}
@@ -450,7 +580,7 @@ function Legend() {
             display: "inline-block",
           }}
         />
-        <span style={{ fontSize: "12px", color: "#64748b" }}>Discharged</span>
+        <span style={{ fontSize: "12px", color: UI.muted }}>Discharged</span>
       </div>
     </div>
   );
@@ -481,7 +611,7 @@ function PatientModal({ patient, onClose }) {
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          background: "#fff",
+          background: UI.card,
           borderRadius: "16px",
           width: "90%",
           maxWidth: "400px",
@@ -491,7 +621,7 @@ function PatientModal({ patient, onClose }) {
       >
         <div
           style={{
-            background: patient.is_discharged ? "#f1f5f9" : c.fill,
+            background: patient.is_discharged ? UI.cardAlt : c.fill,
             borderBottom: `2px solid ${patient.is_discharged ? "#94a3b8" : c.dot}`,
             padding: "20px 24px 16px",
           }}
@@ -526,7 +656,7 @@ function PatientModal({ patient, onClose }) {
                   style={{
                     fontSize: "17px",
                     fontWeight: 600,
-                    color: "#0f172a",
+                    color: patient.is_discharged ? UI.text : "#0f172a",
                   }}
                 >
                   {patient.first_name} {patient.last_name}
@@ -534,7 +664,7 @@ function PatientModal({ patient, onClose }) {
                 <div
                   style={{
                     fontSize: "12px",
-                    color: "#64748b",
+                    color: patient.is_discharged ? UI.muted : "#64748b",
                     marginTop: "2px",
                   }}
                 >
@@ -568,7 +698,7 @@ function PatientModal({ patient, onClose }) {
               textTransform: "uppercase",
               letterSpacing: "0.06em",
               color: patient.is_discharged ? "#64748b" : c.text,
-              background: "#fff",
+              background: UI.card,
               borderRadius: "20px",
               padding: "3px 10px",
               border: `1px solid ${patient.is_discharged ? "#94a3b8" : c.dot}`,
@@ -617,7 +747,7 @@ function PatientModal({ patient, onClose }) {
           ].map(([lbl, val]) => (
             <div
               key={lbl}
-              style={{ borderLeft: "2px solid #e2e8f0", paddingLeft: "10px" }}
+              style={{ borderLeft: `2px solid ${UI.border}`, paddingLeft: "10px" }}
             >
               <div
                 style={{
@@ -625,7 +755,7 @@ function PatientModal({ patient, onClose }) {
                   fontWeight: 600,
                   textTransform: "uppercase",
                   letterSpacing: "0.06em",
-                  color: "#94a3b8",
+                  color: UI.faint,
                 }}
               >
                 {lbl}
@@ -634,7 +764,7 @@ function PatientModal({ patient, onClose }) {
                 style={{
                   fontSize: "13px",
                   fontWeight: 600,
-                  color: "#0f172a",
+                  color: UI.text,
                   marginTop: "3px",
                   textTransform: "capitalize",
                 }}
@@ -651,7 +781,7 @@ function PatientModal({ patient, onClose }) {
 
 // ─── WardPanel ────────────────────────────────────────────────────────────────
 
-function WardPanel({ wardName, wardPatients, onSelectPatient }) {
+function WardPanel({ wardName, wardPatients, alertMap, onSelectPatient }) {
   const [filter, setFilter] = useState("all");
 
   const bedMap = buildBedMap(wardPatients);
@@ -660,6 +790,15 @@ function WardPanel({ wardName, wardPatients, onSelectPatient }) {
   const critical = wardPatients.filter(
     (p) => p.condition === "critical" && !p.is_discharged,
   ).length;
+  const activeAlertCounts = wardPatients.reduce(
+    (counts, patient) => {
+      const severity = getPatientAlertSeverity(patient, alertMap);
+      if (severity === "critical") counts.critical += 1;
+      if (severity === "warning") counts.warning += 1;
+      return counts;
+    },
+    { critical: 0, warning: 0 },
+  );
   const empty = 10 - wardPatients.length;
 
   const rows = [
@@ -677,11 +816,11 @@ function WardPanel({ wardName, wardPatients, onSelectPatient }) {
   return (
     <div
       style={{
-        background: "#fff",
+        background: UI.card,
         borderRadius: "12px",
         overflow: "hidden",
         marginBottom: "28px",
-        border: "0.5px solid #e2e8f0",
+        border: `0.5px solid ${UI.border}`,
       }}
     >
       {/* Header */}
@@ -719,6 +858,11 @@ function WardPanel({ wardName, wardPatients, onSelectPatient }) {
             { label: "Discharged", value: discharged, color: "#94a3b8" },
             { label: "Empty", value: empty, color: "rgba(255,255,255,0.35)" },
             { label: "Critical", value: critical, color: "#fca5a5" },
+            {
+              label: "Active Alerts",
+              value: activeAlertCounts.critical + activeAlertCounts.warning,
+              color: activeAlertCounts.critical ? "#fecaca" : "#fde68a",
+            },
           ].map(({ label, value, color }) => (
             <div key={label} style={{ textAlign: "center" }}>
               <div style={{ fontSize: "22px", fontWeight: 500, color }}>
@@ -756,7 +900,7 @@ function WardPanel({ wardName, wardPatients, onSelectPatient }) {
             style={{
               fontSize: "10px",
               fontWeight: 500,
-              color: "#94a3b8",
+              color: UI.faint,
               textTransform: "uppercase",
               letterSpacing: "0.07em",
             }}
@@ -768,7 +912,7 @@ function WardPanel({ wardName, wardPatients, onSelectPatient }) {
             style={{
               fontSize: "10px",
               fontWeight: 500,
-              color: "#94a3b8",
+              color: UI.faint,
               textTransform: "uppercase",
               letterSpacing: "0.07em",
               textAlign: "right",
@@ -785,7 +929,7 @@ function WardPanel({ wardName, wardPatients, onSelectPatient }) {
               textAlign: "center",
               padding: "32px 0",
               fontSize: "13px",
-              color: "#94a3b8",
+              color: UI.faint,
             }}
           >
             No beds match this filter.
@@ -809,6 +953,10 @@ function WardPanel({ wardName, wardPatients, onSelectPatient }) {
                     <BedCard
                       bedNumber={leftN}
                       patient={bedMap[String(leftN)] ?? null}
+                      alertSeverity={getPatientAlertSeverity(
+                        bedMap[String(leftN)] ?? null,
+                        alertMap,
+                      )}
                       onClick={onSelectPatient}
                     />
                   ) : (
@@ -821,6 +969,10 @@ function WardPanel({ wardName, wardPatients, onSelectPatient }) {
                     <BedCard
                       bedNumber={rightN}
                       patient={bedMap[String(rightN)] ?? null}
+                      alertSeverity={getPatientAlertSeverity(
+                        bedMap[String(rightN)] ?? null,
+                        alertMap,
+                      )}
                       onClick={onSelectPatient}
                     />
                   ) : (
@@ -840,11 +992,66 @@ function WardPanel({ wardName, wardPatients, onSelectPatient }) {
 
 export default function Wards() {
   const [patients, setPatients] = useState([]);
+  const [activeAlerts, setActiveAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [activeWard, setActiveWard] = useState(null);
-  const [showDischarged, setShowDischarged] = useState(true); // NEW: Show all by default
+
+  useEffect(() => {
+    if (document.getElementById(ALERT_BLINK_STYLE_ID)) return;
+
+    const style = document.createElement("style");
+    style.id = ALERT_BLINK_STYLE_ID;
+    style.textContent = `
+      @keyframes wbanBedAlertPulse {
+        0%, 100% {
+          background: var(--bed-alert-fill);
+          box-shadow:
+            0 0 0 0 var(--bed-alert-shadow),
+            inset 0 0 0 2px var(--bed-alert-color);
+          outline: 0 solid var(--bed-alert-shadow);
+          transform: translateY(0);
+        }
+        50% {
+          background: var(--color-surface-a0);
+          box-shadow:
+            0 0 0 8px var(--bed-alert-shadow),
+            inset 0 0 0 3px var(--bed-alert-color);
+          outline: 4px solid var(--bed-alert-shadow);
+          transform: translateY(-2px);
+        }
+      }
+
+      @keyframes wbanBedAlertDotPulse {
+        0%, 100% {
+          opacity: 1;
+          transform: scale(1);
+        }
+        50% {
+          opacity: 0.35;
+          transform: scale(1.45);
+        }
+      }
+
+      .wban-bed-alert-blink {
+        animation: wbanBedAlertPulse 0.95s ease-in-out infinite !important;
+      }
+
+      .wban-bed-alert-critical {
+        animation-duration: 0.7s;
+      }
+
+      .wban-bed-alert-warning {
+        animation-duration: 1.15s;
+      }
+
+      .wban-bed-alert-dot {
+        animation: wbanBedAlertDotPulse 0.7s ease-in-out infinite !important;
+      }
+    `;
+    document.head.appendChild(style);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -853,10 +1060,11 @@ export default function Wards() {
       setError(null);
       try {
         // MODIFIED: Get ALL patients including discharged and archived
-        const { data } = await client.get("/patients/?include_archived=true");
+        const { data } = await client.get(
+          "/patients/?include_archived=true&page_size=500",
+        );
         if (!cancelled) {
           const list = Array.isArray(data) ? data : (data.results ?? []);
-          console.log("Total patients loaded:", list.length); // Debug log
           setPatients(list);
         }
       } catch (error) {
@@ -874,13 +1082,47 @@ export default function Wards() {
     };
   }, []);
 
-  // Filter patients based on toggle
-  const filteredPatients = showDischarged
-    ? patients
-    : patients.filter((p) => !p.is_discharged);
+  useEffect(() => {
+    let cancelled = false;
 
-  const wardMap = groupByWard(filteredPatients);
+    const loadAlerts = async () => {
+      try {
+        const { data } = await client.get("/alerts/", {
+          params: { page_size: 500, is_resolved: false },
+        });
+        if (!cancelled) {
+          setActiveAlerts(data?.results ?? data ?? []);
+        }
+      } catch {
+        if (!cancelled) setActiveAlerts([]);
+      }
+    };
+
+    loadAlerts();
+    const interval = window.setInterval(loadAlerts, ALERT_POLL_MS);
+
+    const handleResolved = (event) => {
+      const id = event.detail?.id;
+      if (!id) return;
+      setActiveAlerts((prev) => prev.filter((alert) => alert.id !== id));
+    };
+
+    window.addEventListener("wban:alert-resolved", handleResolved);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+      window.removeEventListener("wban:alert-resolved", handleResolved);
+    };
+  }, []);
+
+  const activePatients = patients.filter(
+    (p) => !p.is_discharged && !p.is_archived,
+  );
+
+  const wardMap = groupByWard(activePatients);
   const wardNames = Object.keys(wardMap).sort();
+  const alertMap = buildPatientAlertMap(activeAlerts);
 
   useEffect(() => {
     if (wardNames.length && activeWard === null) setActiveWard(wardNames[0]);
@@ -901,7 +1143,7 @@ export default function Wards() {
         style={{
           padding: "40px",
           textAlign: "center",
-          color: "#64748b",
+          color: UI.muted,
           fontFamily: "'Inter','Segoe UI',sans-serif",
         }}
       >
@@ -930,7 +1172,7 @@ export default function Wards() {
       style={{
         padding: "28px",
         fontFamily: "'Inter','Segoe UI',sans-serif",
-        background: "#f8fafc",
+        background: UI.page,
         minHeight: "100vh",
       }}
     >
@@ -949,50 +1191,16 @@ export default function Wards() {
               margin: "0 0 4px",
               fontSize: "22px",
               fontWeight: 800,
-              color: "#0f172a",
+              color: UI.text,
             }}
           >
             Ward Bed Layout
           </h1>
-          <p style={{ margin: "0 0 20px", fontSize: "13px", color: "#64748b" }}>
+          <p style={{ margin: "0 0 20px", fontSize: "13px", color: UI.muted }}>
             {totalPatients} total patients ({activeCount} active,{" "}
             {dischargedCount} discharged, {archivedCount} archived) across{" "}
             {wardNames.length} ward{wardNames.length !== 1 ? "s" : ""}
           </p>
-        </div>
-
-        {/* NEW: Toggle to show/hide discharged patients */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "12px",
-            background: "#fff",
-            padding: "8px 16px",
-            borderRadius: "8px",
-            border: "1px solid #e2e8f0",
-          }}
-        >
-          <label
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              cursor: "pointer",
-            }}
-          >
-            <input
-              type="checkbox"
-              checked={showDischarged}
-              onChange={(e) => setShowDischarged(e.target.checked)}
-              style={{ cursor: "pointer" }}
-            />
-            <span
-              style={{ fontSize: "13px", color: "#64748b", fontWeight: 500 }}
-            >
-              Show discharged patients
-            </span>
-          </label>
         </div>
       </div>
 
@@ -1013,9 +1221,9 @@ export default function Wards() {
                 padding: "6px 18px",
                 borderRadius: "20px",
                 border: "1.5px solid",
-                borderColor: activeWard === w ? "#1e40af" : "#e2e8f0",
-                background: activeWard === w ? "#1e40af" : "#fff",
-                color: activeWard === w ? "#fff" : "#64748b",
+                borderColor: activeWard === w ? UI.primary : UI.border,
+                background: activeWard === w ? UI.primary : UI.card,
+                color: activeWard === w ? "#fff" : UI.muted,
                 fontSize: "13px",
                 fontWeight: 600,
                 cursor: "pointer",
@@ -1029,13 +1237,14 @@ export default function Wards() {
       )}
 
       {wardNames.length === 0 ? (
-        <p style={{ color: "#94a3b8", fontSize: "14px" }}>No patients found.</p>
+        <p style={{ color: UI.faint, fontSize: "14px" }}>No patients found.</p>
       ) : (
         visibleWards.map((w) => (
           <WardPanel
             key={w}
             wardName={w}
             wardPatients={wardMap[w]}
+            alertMap={alertMap}
             onSelectPatient={setSelectedPatient}
           />
         ))

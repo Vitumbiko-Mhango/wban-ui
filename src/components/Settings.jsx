@@ -1,11 +1,12 @@
 import { useRef, useState } from "react";
-import { Eye, EyeOff, LoaderCircle, X } from "lucide-react";
+import { Eye, EyeOff, X } from "lucide-react";
 import Heading from "../components/common/Heading";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Button from "./common/Button";
 import useClickOutside from "../hooks/useClickOutside";
+import client from "../api/client";
 
 const schema = z
   .object({
@@ -53,6 +54,8 @@ const PasswordField = ({ label, register, name, error }) => {
 
 const Settings = ({ closeForm }) => {
   const formRef = useRef(null);
+  const [serverError, setServerError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   useClickOutside(formRef, closeForm);
 
   const {
@@ -65,18 +68,37 @@ const Settings = ({ closeForm }) => {
   });
 
   const onSubmit = async (data) => {
+    setServerError("");
+    setSuccessMessage("");
+
     try {
-      await new Promise((res) => setTimeout(res, 1500));
-      alert("Password changed successfully!");
+      const response = await client.post("/auth/change-password/", {
+        current_password: data.current,
+        new_password: data.newPw,
+        confirm_password: data.confirm,
+      });
+
+      setSuccessMessage(
+        response.data?.message || "Password changed successfully.",
+      );
       reset();
     } catch (err) {
-      console.log(err);
+      const payload = err.response?.data;
+      const message =
+        payload?.detail ||
+        payload?.current_password?.[0] ||
+        payload?.new_password?.[0] ||
+        payload?.confirm_password?.[0] ||
+        payload?.error ||
+        "Unable to change password. Please try again.";
+
+      setServerError(message);
     }
   };
 
   return (
     <div className="absolute z-50 inset-0 flex items-center justify-center bg-dark-a0/80">
-      <div ref={formRef} className="relative bg-light-a0 p-6 m-4 rounded-lg max-w-md w-full">
+      <div ref={formRef} className="relative bg-surface-a0 p-6 m-4 rounded-lg max-w-md w-full">
         {/* Heading */}
         <Heading
           title="Security Settings"
@@ -88,7 +110,19 @@ const Settings = ({ closeForm }) => {
             className="absolute top-4 right-4 size-4 text-dark-a0/50 hover:text-dark-a0 cursor-pointer"
           />
         </div>
-        <div className="space-y-4 mt-8">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 mt-8">
+          {serverError && (
+            <p className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {serverError}
+            </p>
+          )}
+
+          {successMessage && (
+            <p className="rounded-md border border-green-300 bg-green-50 px-3 py-2 text-sm text-green-700">
+              {successMessage}
+            </p>
+          )}
+
           <div className="space-y-4">
             {/* Current Password */}
             <PasswordField
@@ -113,20 +147,21 @@ const Settings = ({ closeForm }) => {
             />
             {/* Buttons */}
             <div className="pt-2 flex justify-end gap-2">
-              <Button variant="secondary" onClick={closeForm}>
+              <Button type="button" variant="secondary" onClick={closeForm}>
                 Cancel
               </Button>
 
               <Button
+                type="submit"
                 variant="primary"
-                onClick={handleSubmit(onSubmit)}
                 disabled={isSubmitting}
+                loading={isSubmitting}
               >
                 Save changes
               </Button>
             </div>
           </div>
-        </div>
+        </form>
       </div>
     </div>
   );

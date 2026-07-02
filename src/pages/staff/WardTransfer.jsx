@@ -121,7 +121,7 @@ const PatientDropdown = ({
       </button>
 
       {open && (
-        <div className="absolute z-50 mt-1 w-full bg-light-a0 border border-surface-a30 rounded-lg shadow-lg overflow-hidden">
+        <div className="absolute z-50 mt-1 w-full bg-surface-a0 border border-surface-a30 rounded-lg shadow-lg overflow-hidden">
           <div className="p-2 border-b border-surface-a30">
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-dark-a0/40 pointer-events-none" />
@@ -254,7 +254,7 @@ const TransferModal = ({
       <form
         ref={formRef}
         onSubmit={handleSubmit(submitHandler)}
-        className="relative bg-light-a0 p-6 rounded-lg max-w-2xl max-h-[90vh] overflow-y-auto w-full m-4"
+        className="relative bg-surface-a0 p-6 rounded-lg max-w-2xl max-h-[90vh] overflow-y-auto w-full m-4"
       >
         <button
           type="button"
@@ -612,7 +612,7 @@ const WardTransfer = () => {
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-surface-a30 bg-white">
+              <tbody className="divide-y divide-surface-a30 bg-surface-a0">
                 {filtered.length === 0 ? (
                   <tr>
                     <td

@@ -10,7 +10,9 @@
 import React from "react";
 import { BrowserRouter, Route, Routes } from "react-router";
 import { AuthProvider } from "./context/AuthContext";
+import { ThemeProvider } from "./context/ThemeContext";
 import ProtectedRoute from "./components/ProtectedRoute";
+import AutoLock from "./components/AutoLock";
 
 import Login from "./pages/auth/Login";
 import StaffLayout from "./pages/staff/StaffLayout";
@@ -22,7 +24,6 @@ import Analytics from "./pages/staff/Analytics";
 import Wards from "./components/Wards";
 import ShiftHandover from "./pages/staff/ShiftHandover";
 import WardTransfer from "./pages/staff/WardTransfer";
-import NEWS2 from "./pages/staff/NEWS2";
 
 import AlertThresholds from "./pages/staff/AlertThresholds";
 
@@ -30,18 +31,20 @@ import AdminLayout from "./pages/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import Users from "./pages/admin/Users";
 import Devices from "./pages/admin/Devices";
-import Configurations from "./pages/admin/Configurations";
 import Thresholds from "./pages/admin/Thresholds";
+import AuditLogs from "./pages/admin/AuditLogs";
 
 import NotFound from "./components/NotFound";
 
 const App = () => {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          {/* Public */}
-          <Route path="/" element={<Login />} />
+    <ThemeProvider>
+      <AuthProvider>
+        <BrowserRouter>
+          <AutoLock />
+          <Routes>
+            {/* Public */}
+            <Route path="/" element={<Login />} />
 
           {/* Staff routes — any authenticated user */}
           <Route element={<ProtectedRoute />}>
@@ -53,7 +56,6 @@ const App = () => {
               <Route path="wards" element={<Wards />} />
               <Route path="handover" element={<ShiftHandover />} />
               <Route path="ward-transfer" element={<WardTransfer />} />
-              <Route path="news2" element={<NEWS2 />} />
               <Route path="thresholds" element={<AlertThresholds />} />
               <Route path="analytics" element={<Analytics />} />
             </Route>
@@ -68,14 +70,15 @@ const App = () => {
               <Route path="thresholds" element={<Thresholds />} />
               <Route path="analytics" element={<Analytics />} />
               <Route path="users" element={<Users />} />
-              <Route path="configurations" element={<Configurations />} />
+              <Route path="audit-logs" element={<AuditLogs />} />
             </Route>
           </Route>
 
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
+    </ThemeProvider>
   );
 };
 

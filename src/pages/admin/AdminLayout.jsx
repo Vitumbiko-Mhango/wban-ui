@@ -6,7 +6,7 @@ import {
   Cpu,
   HeartCrack,
   LayoutDashboard,
-  Settings,
+  ScrollText,
   Settings2,
   Users,
 } from "lucide-react";
@@ -39,9 +39,9 @@ const AdminLayout = () => {
       link: "/admin/users",
     },
     {
-      name: "Configurations",
-      icon: Settings,
-      link: "/admin/configurations",
+      name: "Audit Logs",
+      icon: ScrollText,
+      link: "/admin/audit-logs",
     },
   ];
   return (

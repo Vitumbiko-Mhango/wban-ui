@@ -15,17 +15,20 @@ import Heading from "../../components/common/Heading";
 import {
   Archive,
   ArchiveRestore,
+  ClipboardPlus,
   Cpu,
   Eye,
   Plus,
   RotateCcw,
   SquarePen,
   UserMinus,
+  X,
 } from "lucide-react";
 import Button from "../../components/common/Button";
 import PatientForm from "../../components/PatientForm";
 import PatientDetails from "../../components/PatientDetails";
 import client from "../../api/client";
+import NEWS2 from "./NEWS2";
 
 const getAssignedDeviceId = (patient) => {
   const assigned = patient.assigned_device || patient.device;
@@ -111,6 +114,7 @@ const Patients = () => {
   const [openForm, setOpenForm] = useState(false);
   const [openDetails, setOpenDetails] = useState(false);
   const [editForm, setEditForm] = useState(false);
+  const [showNews2, setShowNews2] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [dischargePatient, setDischargePatient] = useState(null);
   const [dischargeForm, setDischargeForm] = useState({
@@ -168,7 +172,7 @@ const Patients = () => {
 
   // ── Device helpers (unchanged) ───────────────────────────────────────────────
   const getDeviceByDeviceId = async (deviceId) => {
-    const { data } = await client.get("/devices/");
+    const { data } = await client.get("/devices/?page_size=500");
     const list = data?.results ?? data ?? [];
     return list.find((device) => device.device_id === deviceId);
   };
@@ -324,7 +328,6 @@ const Patients = () => {
   const headers =
     view === "active"
       ? [
-          "Patient ID",
           "Patient Name",
           "Ward",
           "Bed",
@@ -335,18 +338,16 @@ const Patients = () => {
         ]
       : view === "discharged"
         ? [
-            "Patient ID",
             "Patient Name",
             "Ward",
             "Discharged",
             "Reason",
           "Actions",
         ]
-      : ["Patient ID", "Patient Name", "Ward", "Archived", "Actions"];
+      : ["Patient Name", "Ward", "Archived", "Actions"];
 
   const sortableColumns = useMemo(() => {
     const base = {
-      "Patient ID": (row) => row.patient_id,
       "Patient Name": (row) => `${row.firstname} ${row.surname}`,
       Ward: (row) => row.ward,
     };
@@ -397,7 +398,7 @@ const Patients = () => {
               onClick={() => setView(v.key)}
               className={`px-3.5 py-1.5 text-sm font-medium rounded-md transition-colors ${
                 view === v.key
-                  ? "bg-white text-primary-a20 shadow-sm"
+                  ? "bg-surface-a0 text-primary-a20 shadow-sm"
                   : "text-dark-a0/55 hover:text-dark-a0"
               }`}
             >
@@ -409,16 +410,27 @@ const Patients = () => {
           ))}
         </div>
 
-        {view === "active" && (
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <Button
-            variant="primary"
+            variant="secondary"
             size="md"
-            iconLeft={Plus}
-            onClick={() => setOpenForm(true)}
+            iconLeft={ClipboardPlus}
+            onClick={() => setShowNews2(true)}
           >
-            Add Patient
+            NEWS2 Scores
           </Button>
-        )}
+
+          {view === "active" && (
+            <Button
+              variant="primary"
+              size="md"
+              iconLeft={Plus}
+              onClick={() => setOpenForm(true)}
+            >
+              Add Patient
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="mt-4">
@@ -432,7 +444,6 @@ const Patients = () => {
               key={row.id}
               className="border border-surface-a20 text-sm hover:bg-surface-a10 cursor-pointer"
             >
-              <td className="px-6 py-3 whitespace-nowrap">{row.patient_id}</td>
               <td className="px-6 py-3 font-medium whitespace-nowrap flex flex-col">
                 {row.firstname} {row.surname}
                 <span className="text-xs font-normal text-dark-a0/60">
@@ -562,6 +573,24 @@ const Patients = () => {
         )}
       </div>
 
+      {showNews2 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-dark-a0/80 p-4">
+          <div className="relative max-h-[88vh] w-full max-w-5xl overflow-y-auto rounded-lg bg-surface-a0 p-3 shadow-xl md:p-4">
+            <button
+              type="button"
+              title="Close NEWS2 Scores"
+              onClick={() => setShowNews2(false)}
+              className="absolute right-4 top-4 rounded-md p-1 text-dark-a0/45 transition-colors hover:bg-surface-a10 hover:text-dark-a0"
+            >
+              <X className="size-5" />
+            </button>
+            <div className="pr-7">
+              <NEWS2 embedded />
+            </div>
+          </div>
+        </div>
+      )}
+
       {openForm && (
         <PatientForm
           closeForm={() => setOpenForm(false)}
@@ -591,7 +620,7 @@ const Patients = () => {
         <div className="fixed z-50 inset-0 flex items-center justify-center bg-dark-a0/80">
           <form
             onSubmit={handleDischarge}
-            className="bg-light-a0 p-6 rounded-lg w-full max-w-lg m-4 shadow-xl"
+            className="bg-surface-a0 p-6 rounded-lg w-full max-w-lg m-4 shadow-xl"
           >
             <h3 className="text-lg font-bold text-dark-a0">
               Discharge Patient

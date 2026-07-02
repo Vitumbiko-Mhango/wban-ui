@@ -1,5 +1,5 @@
 import { X } from "lucide-react";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import Button from "./common/Button";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -24,6 +24,11 @@ const schema = z.object({
   notes: z.string().optional(),
 });
 
+const DEFAULT_WARDS = ["Male Ward", "Female Ward", "ICU", "Pediatrics"];
+const BED_OPTIONS = Array.from({ length: 10 }, (_, index) =>
+  String(index + 1).padStart(2, "0"),
+);
+
 const getDeviceName = (device) => device?.name || device?.device_name || "";
 const isDeviceAssigned = (device) =>
   Boolean(
@@ -37,7 +42,9 @@ const PatientForm = ({ closeForm, onSubmit, patient }) => {
   const isEdit = !!patient;
   const formRef = useRef(null);
   const [devices, setDevices] = useState([]);
+  const [patients, setPatients] = useState([]);
   const [devicesLoading, setDevicesLoading] = useState(true);
+  const [patientsLoading, setPatientsLoading] = useState(true);
   const [submitError, setSubmitError] = useState("");
 
   useClickOutside(formRef, closeForm);
@@ -68,28 +75,74 @@ const PatientForm = ({ closeForm, onSubmit, patient }) => {
   });
 
   const selectedDeviceId = watch("device_id");
+  const selectedWard = watch("ward");
+  const selectedBed = watch("bed");
   const selectedDevice = devices.find((d) => d.device_id === selectedDeviceId);
 
+  const wardOptions = useMemo(() => {
+    const wards = new Set(DEFAULT_WARDS);
+    patients.forEach((item) => {
+      if (item.ward) wards.add(item.ward);
+    });
+    if (patient?.ward) wards.add(patient.ward);
+    return Array.from(wards).sort((a, b) => a.localeCompare(b));
+  }, [patient, patients]);
+
+  const occupiedBeds = useMemo(() => {
+    const taken = new Set();
+    const currentPatientId = patient?.id ? String(patient.id) : null;
+
+    patients.forEach((item) => {
+      if (!selectedWard || item.ward !== selectedWard) return;
+      if (item.is_discharged || item.is_archived) return;
+      if (currentPatientId && String(item.id) === currentPatientId) return;
+
+      const bed = Number.parseInt(item.bed_number || item.bed, 10);
+      if (!Number.isNaN(bed)) taken.add(String(bed).padStart(2, "0"));
+    });
+
+    return taken;
+  }, [patient, patients, selectedWard]);
+
+  const availableBeds = useMemo(() => {
+    const currentBed = patient?.bed ? String(patient.bed).padStart(2, "0") : "";
+
+    return BED_OPTIONS.filter(
+      (bed) => !occupiedBeds.has(bed) || bed === currentBed,
+    );
+  }, [occupiedBeds, patient]);
+
   useEffect(() => {
-    const fetchDevices = async () => {
+    const fetchFormOptions = async () => {
+      setDevicesLoading(true);
+      setPatientsLoading(true);
       try {
-        const { data } = await client.get("/devices/");
-        const list = data?.results ?? data ?? [];
-        const available = list.filter(
+        const [devicesRes, patientsRes] = await Promise.all([
+          client.get("/devices/?page_size=500"),
+          client.get("/patients/?include_archived=true&page_size=500"),
+        ]);
+
+        const deviceList = devicesRes.data?.results ?? devicesRes.data ?? [];
+        const patientList = patientsRes.data?.results ?? patientsRes.data ?? [];
+        const availableDevices = deviceList.filter(
           (device) =>
             device.device_id &&
             (!isDeviceAssigned(device) ||
               device.device_id === patient?.assignedDevice),
         );
-        setDevices(available);
+
+        setDevices(availableDevices);
+        setPatients(patientList);
       } catch {
         setDevices([]);
+        setPatients([]);
       } finally {
         setDevicesLoading(false);
+        setPatientsLoading(false);
       }
     };
 
-    fetchDevices();
+    fetchFormOptions();
   }, [patient]);
 
   useEffect(() => {
@@ -101,7 +154,7 @@ const PatientForm = ({ closeForm, onSubmit, patient }) => {
       age: patient.age || "",
       gender: patient.gender || "male",
       ward: patient.ward || "",
-      bed: patient.bed || "",
+      bed: patient.bed ? String(patient.bed).padStart(2, "0") : "",
       disease: patient.disease || "",
       device_id: patient.assignedDevice || "",
       device_name: patient.deviceName || "",
@@ -116,6 +169,11 @@ const PatientForm = ({ closeForm, onSubmit, patient }) => {
       shouldValidate: false,
     });
   }, [selectedDevice, setValue]);
+
+  useEffect(() => {
+    if (!selectedBed || availableBeds.includes(selectedBed)) return;
+    setValue("bed", "", { shouldDirty: true, shouldValidate: true });
+  }, [availableBeds, selectedBed, setValue]);
 
   const onError = (formErrors) => {
     const firstField = Object.keys(formErrors)[0];
@@ -140,7 +198,7 @@ const PatientForm = ({ closeForm, onSubmit, patient }) => {
       <form
         ref={formRef}
         onSubmit={handleSubmit(submitHandler, onError)}
-        className="relative bg-light-a0 p-6 rounded-lg max-w-2xl max-h-[90vh] overflow-y-auto w-full m-4"
+        className="relative bg-surface-a0 p-6 rounded-lg max-w-2xl max-h-[90vh] overflow-y-auto w-full m-4"
       >
         <div className="absolute right-6">
           <X
@@ -204,28 +262,57 @@ const PatientForm = ({ closeForm, onSubmit, patient }) => {
           <div className="space-y-2 md:space-y-0 md:flex gap-4">
             <div className="w-full">
               <label className="label">Ward</label>
-              <input
+              <select
                 {...register("ward")}
+                disabled={patientsLoading}
                 className={`input ${errors.ward ? "input-error" : ""}`}
-              />
+              >
+                <option value="">
+                  {patientsLoading ? "Loading wards..." : "Select ward"}
+                </option>
+                {wardOptions.map((ward) => (
+                  <option key={ward} value={ward}>
+                    {ward}
+                  </option>
+                ))}
+              </select>
               {errors.ward && (
                 <p className="error-text">{errors.ward.message}</p>
               )}
             </div>
             <div className="w-full">
               <label className="label">Bed</label>
-              <input
+              <select
                 {...register("bed")}
+                disabled={!selectedWard || patientsLoading}
                 className={`input ${errors.bed ? "input-error" : ""}`}
-              />
+              >
+                <option value="">
+                  {!selectedWard
+                    ? "Select ward first"
+                    : patientsLoading
+                      ? "Loading beds..."
+                      : "Select available bed"}
+                </option>
+                {availableBeds.map((bed) => (
+                  <option key={bed} value={bed}>
+                    Bed {bed}
+                  </option>
+                ))}
+              </select>
               {errors.bed && <p className="error-text">{errors.bed.message}</p>}
+              {selectedWard && availableBeds.length === 0 && !patientsLoading && (
+                <p className="mt-1 text-xs text-danger-a0">
+                  No beds are available in {selectedWard}.
+                </p>
+              )}
             </div>
           </div>
 
           <div className="space-y-2 md:space-y-0 md:flex gap-4">
             <div className="w-full">
               <label className="label">
-                device_id
+                Device ID
                 <span className="ml-1 font-normal text-dark-a0/40 text-xs">
                   (optional)
                 </span>

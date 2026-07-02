@@ -11,6 +11,7 @@ import {
   Trash2,
   X,
   AlertTriangle,
+  CalendarDays,
   LoaderCircle,
   Search,
 } from "lucide-react";
@@ -123,7 +124,7 @@ const PatientSelect = ({
 
       {/* Dropdown panel */}
       {open && (
-        <div className="absolute z-50 mt-1 w-72 bg-light-a0 border border-surface-a30 rounded-lg shadow-lg overflow-hidden">
+        <div className="absolute z-50 mt-1 w-72 bg-surface-a0 border border-surface-a30 rounded-lg shadow-lg overflow-hidden">
           {/* Search */}
           <div className="p-2 border-b border-surface-a30">
             <div className="relative">
@@ -225,6 +226,7 @@ const WriteNoteModal = ({
         saved.patient_name || patient?.fullName || `Patient ${data.patient_id}`,
       ward: patient?.ward || "",
       bed: patient?.bed_number || "",
+      created_at: saved.created_at || new Date().toISOString(),
       shift: saved.shift,
       is_critical: saved.is_critical,
       written_by: saved.written_by_name || currentUser,
@@ -248,7 +250,7 @@ const WriteNoteModal = ({
       <form
         ref={formRef}
         onSubmit={handleSubmit(submitHandler)}
-        className="relative bg-light-a0 p-6 rounded-lg max-w-2xl max-h-[90vh] overflow-y-auto w-full m-4"
+        className="relative bg-surface-a0 p-6 rounded-lg max-w-2xl max-h-[90vh] overflow-y-auto w-full m-4"
       >
         <button
           type="button"
@@ -325,7 +327,7 @@ const WriteNoteModal = ({
             {isCritical && (
               <span className="flex items-center gap-1 text-xs text-danger-a0 bg-danger-a20 px-2 py-0.5 rounded-full">
                 <AlertTriangle className="size-3" /> Will be highlighted for
-                incoming staff
+                incoming nurse
               </span>
             )}
           </div>
@@ -386,17 +388,19 @@ const WriteNoteModal = ({
 const NoteCard = ({ note, onDelete, currentUser }) => {
   // written_by_name from the serializer; compare against current user display name
   const isOwn = note.written_by === currentUser;
+  const shiftStyle =
+    SHIFT_STYLES[note.shift] || "bg-surface-a20 text-dark-a0/70";
 
   return (
     <div
-      className={`bg-white rounded-lg border ${
+      className={`flex h-full flex-col rounded-lg border bg-surface-a0 shadow-sm transition-colors hover:border-primary-a20/40 ${
         note.is_critical
-          ? "border-l-4 border-l-danger-a10 border-surface-a30"
+          ? "border-l-4 border-l-danger-a10 border-danger-a10/40"
           : "border-surface-a30"
-      } p-4 space-y-3`}
+      } overflow-hidden`}
     >
-      <div className="flex items-start justify-between gap-2">
-        <div>
+      <div className="flex items-start justify-between gap-3 border-b border-surface-a20 px-4 py-3">
+        <div className="min-w-0">
           <div className="flex items-center flex-wrap gap-2">
             <h3 className="font-bold text-dark-a0">{note.patient}</h3>
             <span className="text-xs text-dark-a0/50">
@@ -405,7 +409,7 @@ const NoteCard = ({ note, onDelete, currentUser }) => {
             </span>
             <span
               className={`text-xs font-medium px-2 py-0.5 rounded-full capitalize ${
-                SHIFT_STYLES[note.shift] ?? ""
+                shiftStyle
               }`}
             >
               {note.shift}
@@ -417,7 +421,7 @@ const NoteCard = ({ note, onDelete, currentUser }) => {
             )}
           </div>
           <p className="text-xs text-dark-a0/50 mt-0.5">
-            Written by <span className="font-medium">{note.written_by}</span> ·{" "}
+            Nurse <span className="font-medium">{note.written_by}</span> ·{" "}
             {note.time}
           </p>
         </div>
@@ -433,7 +437,15 @@ const NoteCard = ({ note, onDelete, currentUser }) => {
         )}
       </div>
 
-      <p className="text-sm text-dark-a0 leading-relaxed">{note.notes}</p>
+      <div className="flex flex-1 flex-col gap-3 p-4">
+        <div className="rounded-md bg-surface-a10 px-3 py-2">
+          <p className="text-xs font-semibold uppercase text-dark-a0/45">
+            Clinical summary
+          </p>
+          <p className="mt-1 text-sm leading-relaxed text-dark-a0">
+            {note.notes}
+          </p>
+        </div>
 
       {note.pending_tasks && (
         <div className="bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
@@ -445,13 +457,14 @@ const NoteCard = ({ note, onDelete, currentUser }) => {
       )}
 
       {note.medications_due && (
-        <div className="bg-blue-50 border border-blue-200 rounded-md px-3 py-2">
-          <p className="text-xs font-semibold text-blue-700 mb-0.5">
+        <div className="rounded-md border border-sky-200 bg-sky-50 px-3 py-2">
+          <p className="text-xs font-semibold text-sky-700 mb-0.5">
             Medications Due
           </p>
-          <p className="text-xs text-blue-800">{note.medications_due}</p>
+          <p className="text-xs text-sky-800">{note.medications_due}</p>
         </div>
       )}
+      </div>
     </div>
   );
 };
@@ -460,6 +473,7 @@ const NoteCard = ({ note, onDelete, currentUser }) => {
 const normalizeNote = (n) => ({
   id: n.id,
   patient: n.patient_name || `Patient ${n.patient}`,
+  created_at: n.created_at,
   // The handover serializer doesn't return ward/bed — carry them from patients state
   ward: n.ward || "",
   bed: n.bed || "",
@@ -475,6 +489,12 @@ const normalizeNote = (n) => ({
   pending_tasks: n.pending_tasks || "",
   medications_due: n.medications_due || "",
 });
+
+const toDateBoundary = (value, endOfDay = false) => {
+  if (!value) return null;
+  const date = new Date(`${value}T${endOfDay ? "23:59:59.999" : "00:00:00.000"}`);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 const ShiftHandover = () => {
@@ -493,6 +513,9 @@ const ShiftHandover = () => {
   const [shiftFilter, setShiftFilter] = useState("all");
   const [wardFilter, setWardFilter] = useState("All Wards");
   const [criticalOnly, setCriticalOnly] = useState(false);
+  const [nameFilter, setNameFilter] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
   // ── Load patients from PostgreSQL ──────────────────────────────────────────
   // Fetched separately so the modal can open immediately even if notes are slow
@@ -556,15 +579,37 @@ const ShiftHandover = () => {
   ];
 
   const filtered = useMemo(
-    () =>
-      notes.filter((note) => {
+    () => {
+      const query = nameFilter.trim().toLowerCase();
+      const from = toDateBoundary(startDate);
+      const to = toDateBoundary(endDate, true);
+
+      return notes.filter((note) => {
+        const noteDate = new Date(note.created_at);
         const matchShift = shiftFilter === "all" || note.shift === shiftFilter;
         const matchWard =
           wardFilter === "All Wards" || note.ward === wardFilter;
         const matchCritical = !criticalOnly || note.is_critical;
-        return matchShift && matchWard && matchCritical;
-      }),
-    [notes, shiftFilter, wardFilter, criticalOnly],
+        const matchName =
+          !query ||
+          note.patient.toLowerCase().includes(query) ||
+          note.written_by.toLowerCase().includes(query);
+        const matchStart =
+          !from || (!Number.isNaN(noteDate.getTime()) && noteDate >= from);
+        const matchEnd =
+          !to || (!Number.isNaN(noteDate.getTime()) && noteDate <= to);
+
+        return (
+          matchShift &&
+          matchWard &&
+          matchCritical &&
+          matchName &&
+          matchStart &&
+          matchEnd
+        );
+      });
+    },
+    [criticalOnly, endDate, nameFilter, notes, shiftFilter, startDate, wardFilter],
   );
 
   const criticalCount = notes.filter((n) => n.is_critical).length;
@@ -606,11 +651,46 @@ const ShiftHandover = () => {
       )}
 
       {/* Filter bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(14rem,1fr)_auto_auto_auto_auto_auto_auto] xl:items-center">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-dark-a0/40" />
+          <input
+            type="search"
+            value={nameFilter}
+            onChange={(e) => setNameFilter(e.target.value)}
+            placeholder="Filter by patient or nurse"
+            className="input pl-9"
+          />
+        </div>
+
+        <div className="relative">
+          <CalendarDays className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-dark-a0/40" />
+          <input
+            type="date"
+            value={startDate}
+            max={endDate || undefined}
+            onChange={(e) => setStartDate(e.target.value)}
+            aria-label="Start date"
+            className="input pl-9"
+          />
+        </div>
+
+        <div className="relative">
+          <CalendarDays className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-dark-a0/40" />
+          <input
+            type="date"
+            value={endDate}
+            min={startDate || undefined}
+            onChange={(e) => setEndDate(e.target.value)}
+            aria-label="End date"
+            className="input pl-9"
+          />
+        </div>
+
         <select
           value={shiftFilter}
           onChange={(e) => setShiftFilter(e.target.value)}
-          className="input w-auto"
+          className="input"
         >
           {SHIFTS.map((s) => (
             <option key={s.value} value={s.value}>
@@ -622,7 +702,7 @@ const ShiftHandover = () => {
         <select
           value={wardFilter}
           onChange={(e) => setWardFilter(e.target.value)}
-          className="input w-auto"
+          className="input"
         >
           {wards.map((w) => (
             <option key={w} value={w}>
@@ -647,7 +727,21 @@ const ShiftHandover = () => {
           <span className="text-sm text-dark-a0/70">Critical only</span>
         </label>
 
-        <span className="text-xs text-dark-a0/40 sm:ml-auto">
+        {(nameFilter || startDate || endDate) && (
+          <button
+            type="button"
+            onClick={() => {
+              setNameFilter("");
+              setStartDate("");
+              setEndDate("");
+            }}
+            className="text-sm font-medium text-primary-a20 hover:underline"
+          >
+            Clear
+          </button>
+        )}
+
+        <span className="text-xs text-dark-a0/40 xl:text-right">
           {filtered.length} {filtered.length === 1 ? "note" : "notes"} shown
         </span>
       </div>
@@ -670,7 +764,7 @@ const ShiftHandover = () => {
       )}
 
       {!loading && filtered.length > 0 && (
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
           {filtered.map((note) => (
             <NoteCard
               key={note.id}

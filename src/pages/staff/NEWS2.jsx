@@ -112,15 +112,15 @@ const RiskBadge = ({ risk }) => {
   );
 };
 
-const ScoreCard = ({ score }) => {
+const ScoreCard = ({ score, compact = false }) => {
   const risk = getRisk(score);
   const cfg = riskConfig[risk] || riskConfig.low;
   const rows = paramRows(score);
 
   return (
-    <article className="rounded-lg border border-surface-a30 bg-white p-4 shadow-sm">
+    <article className={`rounded-lg border border-surface-a30 bg-surface-a0 shadow-sm ${compact ? "p-3" : "p-4"}`}>
       {risk === "high" && (
-        <div className="mb-4 rounded-md border border-danger-a10 bg-danger-a20 px-4 py-3">
+        <div className={`${compact ? "mb-3 px-3 py-2" : "mb-4 px-4 py-3"} rounded-md border border-danger-a10 bg-danger-a20`}>
           <p className="flex items-center gap-2 text-sm font-bold text-danger-a0">
             <AlertTriangle className="size-4" />
             HIGH RISK — Score {score.total_score}
@@ -131,23 +131,23 @@ const ScoreCard = ({ score }) => {
         </div>
       )}
 
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+      <div className={`flex flex-col lg:flex-row lg:items-start lg:justify-between ${compact ? "gap-2" : "gap-4"}`}>
         <div className="min-w-0">
           <h3 className="font-bold text-dark-a0">{getName(score)}</h3>
           {getWard(score) && (
             <p className="text-sm text-dark-a0/55">{getWard(score)}</p>
           )}
-          <p className="mt-2 text-xs text-dark-a0/45">
+            <p className={`${compact ? "mt-1" : "mt-2"} text-xs text-dark-a0/45`}>
             Calculated by {score.calculated_by} · {score.timestamp}
           </p>
         </div>
-        <div className="flex items-center gap-4">
+        <div className={`flex items-center ${compact ? "gap-3" : "gap-4"}`}>
           <div className="text-right">
             <p className="text-xs font-medium uppercase text-dark-a0/45">
               Total score
             </p>
             <p
-              className={`text-5xl font-extrabold leading-none ${cfg.scoreClass}`}
+              className={`${compact ? "text-3xl" : "text-5xl"} font-extrabold leading-none ${cfg.scoreClass}`}
             >
               {score.total_score}
             </p>
@@ -156,9 +156,9 @@ const ScoreCard = ({ score }) => {
         </div>
       </div>
 
-      <div className="mt-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-7">
+      <div className={`${compact ? "mt-3" : "mt-5"} grid gap-2 sm:grid-cols-2 xl:grid-cols-7`}>
         {rows.map((row) => (
-          <div key={row.label} className="rounded-md bg-surface-a10 p-3">
+          <div key={row.label} className={`rounded-md bg-surface-a10 ${compact ? "p-2" : "p-3"}`}>
             <p className="text-xs font-semibold text-dark-a0/55">{row.label}</p>
             <p className="mt-1 text-sm font-bold text-dark-a0">{row.value}</p>
             <p className="mt-1 text-xs text-dark-a0/45">
@@ -169,7 +169,7 @@ const ScoreCard = ({ score }) => {
       </div>
 
       {score.notes && (
-        <div className="mt-4 rounded-md border border-surface-a30 bg-surface-a10 px-3 py-2">
+        <div className={`${compact ? "mt-3" : "mt-4"} rounded-md border border-surface-a30 bg-surface-a10 px-3 py-2`}>
           <p className="text-xs font-semibold text-dark-a0/55">Notes</p>
           <p className="mt-1 text-sm text-dark-a0/75">{score.notes}</p>
         </div>
@@ -237,7 +237,7 @@ const PatientDropdown = ({ patients, loading, value, onChange, error }) => {
 
       {/* Panel */}
       {open && (
-        <div className="absolute z-50 mt-1 w-full bg-light-a0 border border-surface-a30 rounded-lg shadow-lg overflow-hidden">
+        <div className="absolute z-50 mt-1 w-full bg-surface-a0 border border-surface-a30 rounded-lg shadow-lg overflow-hidden">
           <div className="p-2 border-b border-surface-a30">
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-dark-a0/40 pointer-events-none" />
@@ -375,11 +375,11 @@ const CalculateModal = ({
   };
 
   return (
-    <div className="absolute inset-0 z-50 flex items-center justify-center bg-dark-a0/80">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-dark-a0/80">
       <form
         ref={modalRef}
         onSubmit={handleSubmit}
-        className="relative m-4 max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-light-a0 p-6"
+        className="relative m-4 max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-surface-a0 p-6"
       >
         <button
           type="button"
@@ -562,7 +562,7 @@ const CalculateModal = ({
 };
 
 // ── Main page ─────────────────────────────────────────────────────────────────
-const NEWS2 = () => {
+const NEWS2 = ({ embedded = false }) => {
   const [patients, setPatients] = useState([]);
   const [patientsLoading, setPatientsLoading] = useState(true);
   const [scores, setScores] = useState([]);
@@ -628,26 +628,118 @@ const NEWS2 = () => {
 
   const loading = scoresLoading;
 
+  const riskCounts = useMemo(
+    () =>
+      scores.reduce(
+        (counts, score) => {
+          counts[getRisk(score)] = (counts[getRisk(score)] || 0) + 1;
+          return counts;
+        },
+        { low: 0, medium: 0, high: 0 },
+      ),
+    [scores],
+  );
+
+  const latestScore = scores[0];
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <Heading
-          title="NEWS2 Score"
-          subtitle="Calculate and review patient early warning scores"
-        />
+    <div
+      className={
+        embedded
+          ? "relative"
+          : "relative space-y-6"
+      }
+    >
+      <div
+        className={`flex flex-col gap-4 md:flex-row md:items-start md:justify-between ${
+          embedded ? "border-b border-surface-a20 pb-4" : ""
+        }`}
+      >
+        {embedded ? (
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="inline-flex size-8 items-center justify-center rounded-md bg-primary-a20/10 text-primary-a20">
+                <Stethoscope className="size-3.5" />
+              </span>
+              <div>
+                <h2 className="text-base font-bold text-dark-a0">NEWS2 Scores</h2>
+                <p className="text-xs text-dark-a0/55">
+                  Calculate and review early warning scores from the patient dashboard
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <Heading
+            title="NEWS2 Score"
+            subtitle="Calculate and review patient early warning scores"
+          />
+        )}
         <Button iconLeft={ClipboardPlus} onClick={() => setShowModal(true)}>
           Calculate Score
         </Button>
       </div>
 
       {loadError && (
-        <div className="flex items-center gap-3 rounded-lg border border-danger-a10/40 bg-danger-a20 px-4 py-3">
+        <div
+          className={`flex items-center gap-3 rounded-lg border border-danger-a10/40 bg-danger-a20 px-4 py-3 ${
+            embedded ? "mt-4" : ""
+          }`}
+        >
           <AlertTriangle className="size-5 shrink-0 text-danger-a10" />
           <p className="text-sm font-medium text-danger-a0">{loadError}</p>
         </div>
       )}
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+      <div
+        className={`grid gap-3 ${
+          embedded ? "mt-3 md:grid-cols-4" : "md:grid-cols-4"
+        }`}
+      >
+        <div className={`rounded-md border border-surface-a20 bg-surface-a10 ${embedded ? "p-3" : "p-4"}`}>
+          <p className="text-xs font-semibold uppercase text-dark-a0/45">
+            High risk
+          </p>
+          <p className={`${embedded ? "mt-1 text-xl" : "mt-2 text-2xl"} font-extrabold text-danger-a0`}>
+            {riskCounts.high}
+          </p>
+        </div>
+        <div className={`rounded-md border border-surface-a20 bg-surface-a10 ${embedded ? "p-3" : "p-4"}`}>
+          <p className="text-xs font-semibold uppercase text-dark-a0/45">
+            Medium risk
+          </p>
+          <p className={`${embedded ? "mt-1 text-xl" : "mt-2 text-2xl"} font-extrabold text-warning-a0`}>
+            {riskCounts.medium}
+          </p>
+        </div>
+        <div className={`rounded-md border border-surface-a20 bg-surface-a10 ${embedded ? "p-3" : "p-4"}`}>
+          <p className="text-xs font-semibold uppercase text-dark-a0/45">
+            Low risk
+          </p>
+          <p className={`${embedded ? "mt-1 text-xl" : "mt-2 text-2xl"} font-extrabold text-success-a0`}>
+            {riskCounts.low}
+          </p>
+        </div>
+        <div className={`rounded-md border border-surface-a20 bg-surface-a10 ${embedded ? "p-3" : "p-4"}`}>
+          <p className="text-xs font-semibold uppercase text-dark-a0/45">
+            Latest score
+          </p>
+          <p className={`${embedded ? "mt-1" : "mt-2"} truncate text-sm font-bold text-dark-a0`}>
+            {latestScore ? getName(latestScore) : "No scores yet"}
+          </p>
+          <p className="mt-1 text-xs text-dark-a0/45">
+            {latestScore
+              ? `Score ${latestScore.total_score} · ${riskConfig[getRisk(latestScore)]?.label || "Low Risk"}`
+              : "Calculate a score to start tracking"}
+          </p>
+        </div>
+      </div>
+
+      <div
+        className={`flex flex-col gap-3 sm:flex-row sm:items-center ${
+          embedded ? "mt-4" : ""
+        }`}
+      >
         <div className="relative sm:w-72">
           <Search className="pointer-events-none absolute left-3 top-3 size-4 text-dark-a0/35" />
           <input
@@ -675,7 +767,7 @@ const NEWS2 = () => {
         </span>
       </div>
 
-      <div className="space-y-4">
+      <div className={`${embedded ? "mt-3 space-y-3" : "space-y-4"}`}>
         {loading ? (
           <div className="flex items-center justify-center gap-2 py-16 text-sm text-dark-a0/50">
             <LoaderCircle className="size-4 animate-spin" /> Loading scores…
@@ -689,7 +781,7 @@ const NEWS2 = () => {
             </p>
           </div>
         ) : (
-          filtered.map((s) => <ScoreCard key={s.id} score={s} />)
+          filtered.map((s) => <ScoreCard key={s.id} score={s} compact={embedded} />)
         )}
       </div>
 

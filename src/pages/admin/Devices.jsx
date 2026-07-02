@@ -30,19 +30,40 @@ import { formatDate } from "../../utils/DateFormatter";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const getDeviceName = (d) => d.name || d.device_name || "Unnamed device";
-const getDeviceStatus = (d) => (d.status || "offline").toLowerCase();
 const getDeviceKey = (d) => d.id || d.device_id;
 const getFirmware = (d) => d.firmware_version || d.firmware || "Not set";
-const getAssignedName = (d) => {
+const getPatientDisplayName = (patient) => {
+  if (!patient) return "";
+  return (
+    patient.name ||
+    patient.full_name ||
+    [patient.first_name, patient.last_name].filter(Boolean).join(" ")
+  );
+};
+
+const getAssignedPatientName = (d, patientsById = new Map()) => {
   const p = d.assigned_patient || d.patient;
-  if (!p) return "Unassigned";
-  if (typeof p === "string") return p;
-  return p.name || p.full_name || "Assigned patient";
+  if (typeof p === "object" && p !== null) {
+    return getPatientDisplayName(p) || "Assigned patient";
+  }
+  const patientId = d.patient_id || p;
+  const matched = patientsById.get(String(patientId));
+  const name = getPatientDisplayName(matched);
+  return name || "";
+};
+const getAssignedName = (d, patientsById = new Map()) => {
+  const name = getAssignedPatientName(d, patientsById);
+  return name ? `Assigned to ${name}` : "Unassigned";
 };
 const isPaired = (d) =>
   Boolean(d.assigned_patient || d.patient || d.patient_id || d.is_paired);
+const getDeviceStatus = (d) => (isPaired(d) ? "online" : "offline");
 const patientHasDevice = (p) =>
   Boolean(p.device || p.assigned_device || p.device_id);
+const normalizeDevice = (device) => ({
+  ...device,
+  status: isPaired(device) ? "online" : "offline",
+});
 const normalizeList = (data, fallback) =>
   Array.isArray(data)
     ? data
@@ -126,7 +147,7 @@ const ModalShell = ({ children, onClose, maxWidth = "max-w-xl" }) => {
     <div className="absolute inset-0 z-50 flex items-center justify-center bg-dark-a0/80">
       <div
         ref={ref}
-        className={`relative m-4 max-h-[90vh] w-full ${maxWidth} overflow-y-auto rounded-lg bg-light-a0 p-6`}
+        className={`relative m-4 max-h-[90vh] w-full ${maxWidth} overflow-y-auto rounded-lg bg-surface-a0 p-6`}
       >
         <button
           type="button"
@@ -289,6 +310,9 @@ const PairDeviceModal = ({ device, patients, onClose, onPaired }) => {
         ...device,
         ...data,
         assigned_patient: data.assigned_patient || data.patient,
+        patient_id: data.patient_id || patientId,
+        is_paired: true,
+        status: "online",
       });
       onClose();
     } catch (err) {
@@ -398,7 +422,7 @@ const Devices = () => {
   const fetchDevices = async () => {
     try {
       const { data } = await client.get("/devices/");
-      setDevices(normalizeList(data, []));
+      setDevices(normalizeList(data, []).map(normalizeDevice));
     } catch {
       /* keep existing */
     }
@@ -441,19 +465,34 @@ const Devices = () => {
     [devices, statusFilter, pairingFilter],
   );
 
+  const patientsById = useMemo(
+    () =>
+      new Map(
+        patients.map((patient) => [
+          String(patient.id || patient.patient_id),
+          patient,
+        ]),
+      ),
+    [patients],
+  );
+
   const upsert = (updated) =>
     setDevices((prev) =>
       prev.some((d) => getDeviceKey(d) === getDeviceKey(updated))
         ? prev.map((d) =>
-            getDeviceKey(d) === getDeviceKey(updated) ? updated : d,
+            getDeviceKey(d) === getDeviceKey(updated)
+              ? normalizeDevice(updated)
+              : d,
           )
-        : [updated, ...prev],
+        : [normalizeDevice(updated), ...prev],
     );
 
   const handleUnpair = async (device) => {
     if (
       !window.confirm(
-        `Unpair ${device.device_id} from ${getAssignedName(device)}?`,
+        `Unpair ${device.device_id} from ${
+          getAssignedPatientName(device, patientsById) || "this patient"
+        }?`,
       )
     )
       return;
@@ -467,7 +506,9 @@ const Devices = () => {
         ...data,
         assigned_patient: null,
         patient: null,
-        status: data.status || "offline",
+        patient_id: null,
+        is_paired: false,
+        status: "offline",
       });
     } catch (err) {
       setActionError(err?.response?.data?.detail || "Unable to unpair device.");
@@ -488,7 +529,7 @@ const Devices = () => {
           <StatusBadge status={status} />
         </td>
         <td className="border border-surface-a30 px-6 py-4 text-dark-a0/70">
-          {getAssignedName(device)}
+          {getAssignedName(device, patientsById)}
         </td>
         <td className="border border-surface-a30 px-6 py-4">
           <BatteryBar value={device.battery_level} />
@@ -585,7 +626,7 @@ const Devices = () => {
           <option value="faulty">Faulty</option>
           <option value="low_battery">Low battery</option>
         </select>
-        <div className="inline-flex rounded-md border border-surface-a30 bg-white p-1">
+        <div className="inline-flex rounded-md border border-surface-a30 bg-surface-a0 p-1">
           {[
             { label: "All", value: "all" },
             { label: "Paired only", value: "paired" },

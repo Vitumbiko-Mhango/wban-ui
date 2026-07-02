@@ -31,7 +31,7 @@ const VITALS = [
     key: "heart_rate",
     label: "Heart Rate",
     unit: "bpm",
-    icon: "❤️",
+    icon: "🫀",
     fields: [
       {
         label: "Normal",
@@ -113,19 +113,19 @@ const S = {
   page: {
     padding: "28px",
     fontFamily: "'Inter','Segoe UI',sans-serif",
-    background: "#f8fafc",
+    background: "var(--color-surface-a0)",
     minHeight: "100vh",
   },
   card: {
-    background: "#fff",
+    background: "var(--color-surface-a0)",
     borderRadius: "12px",
-    border: "0.5px solid #e2e8f0",
+    border: "0.5px solid var(--color-surface-a30)",
     marginBottom: "20px",
     overflow: "hidden",
   },
   cardHead: {
     padding: "14px 20px",
-    borderBottom: "0.5px solid #e2e8f0",
+    borderBottom: "0.5px solid var(--color-surface-a30)",
     display: "flex",
     alignItems: "center",
     gap: "10px",
@@ -134,7 +134,7 @@ const S = {
   label: {
     fontSize: "11px",
     fontWeight: 600,
-    color: "#64748b",
+    color: "color-mix(in srgb, var(--color-dark-a0) 62%, transparent)",
     textTransform: "uppercase",
     letterSpacing: "0.06em",
     display: "block",
@@ -144,9 +144,10 @@ const S = {
     width: "100%",
     padding: "8px 10px",
     borderRadius: "8px",
-    border: "1.5px solid #e2e8f0",
+    border: "1.5px solid var(--color-surface-a30)",
     fontSize: "13px",
-    color: "#0f172a",
+    color: "var(--color-dark-a0)",
+    background: "var(--color-surface-a10)",
     outline: "none",
     boxSizing: "border-box",
     transition: "border-color 0.15s",
@@ -183,23 +184,46 @@ const S = {
     cursor: "pointer",
     border: "none",
     transition: "opacity 0.15s",
-    background: primary ? "#1e40af" : "#f1f5f9",
-    color: primary ? "#fff" : "#475569",
+    background: primary ? "var(--color-primary-a20)" : "var(--color-surface-a20)",
+    color: primary ? "#fff" : "var(--color-dark-a0)",
   }),
 };
 
 // ─── VitalCard ────────────────────────────────────────────────────────────────
 
 function VitalCard({ vital, values, onChange }) {
+  const warningIcon = ["heart_rate", "spo2", "stress"].includes(vital.key);
+
   return (
     <div style={S.card}>
       <div style={S.cardHead}>
-        <span style={{ fontSize: "18px" }}>{vital.icon}</span>
+        <span
+          style={{
+            fontSize: "18px",
+            color: warningIcon ? "var(--color-warning-a10)" : "inherit",
+            filter: warningIcon
+              ? "sepia(1) saturate(4) hue-rotate(355deg)"
+              : "none",
+          }}
+        >
+          {vital.icon}
+        </span>
         <div>
-          <div style={{ fontSize: "14px", fontWeight: 600, color: "#0f172a" }}>
+          <div
+            style={{
+              fontSize: "14px",
+              fontWeight: 600,
+              color: "var(--color-dark-a0)",
+            }}
+          >
             {vital.label}
           </div>
-          <div style={{ fontSize: "11px", color: "#94a3b8" }}>
+          <div
+            style={{
+              fontSize: "11px",
+              color: "color-mix(in srgb, var(--color-dark-a0) 45%, transparent)",
+            }}
+          >
             Unit: {vital.unit}
           </div>
         </div>
@@ -225,7 +249,7 @@ function VitalCard({ vital, values, onChange }) {
                       e.target.style.borderColor = f.color;
                     }}
                     onBlur={(e) => {
-                      e.target.style.borderColor = "#e2e8f0";
+                      e.target.style.borderColor = "var(--color-surface-a30)";
                     }}
                   />
                 </div>
@@ -243,7 +267,7 @@ function VitalCard({ vital, values, onChange }) {
                       e.target.style.borderColor = f.color;
                     }}
                     onBlur={(e) => {
-                      e.target.style.borderColor = "#e2e8f0";
+                      e.target.style.borderColor = "var(--color-surface-a30)";
                     }}
                   />
                 </div>
@@ -400,12 +424,18 @@ export default function AlertThresholds() {
           margin: "0 0 4px",
           fontSize: "22px",
           fontWeight: 800,
-          color: "#0f172a",
+          color: "var(--color-dark-a0)",
         }}
       >
         Alert Thresholds
       </h1>
-      <p style={{ margin: "0 0 24px", fontSize: "13px", color: "#64748b" }}>
+      <p
+        style={{
+          margin: "0 0 24px",
+          fontSize: "13px",
+          color: "color-mix(in srgb, var(--color-dark-a0) 62%, transparent)",
+        }}
+      >
         Set per-patient vital sign ranges. Readings outside these limits will
         trigger alerts.
       </p>
@@ -426,7 +456,7 @@ export default function AlertThresholds() {
               <select
                 value={patientId}
                 onChange={(e) => setPatientId(e.target.value)}
-                style={{ ...S.input, appearance: "none", background: "#fff" }}
+                style={{ ...S.input, appearance: "none" }}
               >
                 <option value="">— Choose a patient —</option>
                 {patients.map((p) => (
@@ -465,12 +495,18 @@ export default function AlertThresholds() {
                     style={{
                       fontSize: "14px",
                       fontWeight: 600,
-                      color: "#0f172a",
+                      color: "var(--color-dark-a0)",
                     }}
                   >
                     {selectedPatient.first_name} {selectedPatient.last_name}
                   </div>
-                  <div style={{ fontSize: "12px", color: "#64748b" }}>
+                  <div
+                    style={{
+                      fontSize: "12px",
+                      color:
+                        "color-mix(in srgb, var(--color-dark-a0) 62%, transparent)",
+                    }}
+                  >
                     {selectedPatient.ward} · Bed {selectedPatient.bed_number}
                     {selectedPatient.disease
                       ? ` · ${selectedPatient.disease}`
@@ -484,8 +520,12 @@ export default function AlertThresholds() {
                     fontWeight: 600,
                     padding: "4px 10px",
                     borderRadius: "20px",
-                    background: thresholdId ? "#dcfce7" : "#fef9c3",
-                    color: thresholdId ? "#166534" : "#854d0e",
+                    background: thresholdId
+                      ? "var(--color-success-a20)"
+                      : "var(--color-warning-a20)",
+                    color: thresholdId
+                      ? "var(--color-success-a0)"
+                      : "var(--color-warning-a0)",
                   }}
                 >
                   {thresholdId ? "Custom thresholds" : "Using defaults"}
@@ -502,7 +542,7 @@ export default function AlertThresholds() {
           style={{
             textAlign: "center",
             padding: "40px 0",
-            color: "#64748b",
+            color: "color-mix(in srgb, var(--color-dark-a0) 62%, transparent)",
             fontSize: "13px",
           }}
         >
@@ -535,8 +575,8 @@ export default function AlertThresholds() {
             style={{
               position: "sticky",
               bottom: "20px",
-              background: "#fff",
-              border: "0.5px solid #e2e8f0",
+              background: "var(--color-surface-a0)",
+              border: "0.5px solid var(--color-surface-a30)",
               borderRadius: "12px",
               padding: "14px 20px",
               display: "flex",
@@ -545,7 +585,13 @@ export default function AlertThresholds() {
               boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
             }}
           >
-            <span style={{ fontSize: "12px", color: "#64748b" }}>
+            <span
+              style={{
+                fontSize: "12px",
+                color:
+                  "color-mix(in srgb, var(--color-dark-a0) 62%, transparent)",
+              }}
+            >
               {thresholdId
                 ? "Editing existing thresholds, changes take effect immediately on save."
                 : "No custom thresholds yet, the system will use clinical defaults."}
@@ -572,7 +618,7 @@ export default function AlertThresholds() {
           style={{
             textAlign: "center",
             padding: "60px 0",
-            color: "#94a3b8",
+            color: "color-mix(in srgb, var(--color-dark-a0) 50%, transparent)",
             fontSize: "14px",
           }}
         >

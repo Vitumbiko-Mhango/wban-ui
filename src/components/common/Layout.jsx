@@ -10,17 +10,22 @@ import {
   ChevronDown,
   LogOut,
   Menu,
+  Moon,
   Settings as SettingsIcon,
+  Sun,
 } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 import { Outlet, Link, useLocation, useNavigate } from "react-router";
 import useClickOutside from "../../hooks/useClickOutside";
 import Settings from "../../components/Settings";
+import AlertAlarmMonitor from "../../components/AlertAlarmMonitor";
 import useOnlineStatus from "../../hooks/useOnlineStatus";
 import { useAuth } from "../../context/AuthContext";
+import { useTheme } from "../../context/ThemeContext";
 
 const Layout = ({ menuItems = [] }) => {
   const { user, logout } = useAuth();
+  const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -127,6 +132,17 @@ const Layout = ({ menuItems = [] }) => {
             </h2>
           </div>
 
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={toggleTheme}
+              aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+              title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+              className="inline-flex size-9 items-center justify-center rounded-md border border-surface-a30 bg-surface-a0 text-dark-a0/70 transition-colors hover:bg-surface-a20 hover:text-primary-a20 focus:outline-none focus:ring-2 focus:ring-primary-a20/30 cursor-pointer"
+            >
+              {isDark ? <Sun className="size-4" /> : <Moon className="size-4" />}
+            </button>
+
           {/* Profile dropdown */}
           <div ref={dropdownRef} className="relative">
             <button
@@ -150,7 +166,7 @@ const Layout = ({ menuItems = [] }) => {
 
             {/* Dropdown menu */}
             <div
-              className={`absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg overflow-hidden transform transition-all duration-200 ${
+              className={`absolute right-0 mt-2 w-48 bg-surface-a0 rounded-md shadow-lg overflow-hidden transform transition-all duration-200 ${
                 isDropdownOpen
                   ? "opacity-100 scale-100"
                   : "opacity-0 scale-95 pointer-events-none"
@@ -177,10 +193,12 @@ const Layout = ({ menuItems = [] }) => {
               </button>
             </div>
           </div>
+          </div>
         </header>
 
         {/* Main content */}
         <main className="flex-1 p-4 md:p-6">
+          <AlertAlarmMonitor />
           <Outlet />
           {isSettingsOpen && (
             <Settings closeForm={() => setIsSettingsOpen(false)} />

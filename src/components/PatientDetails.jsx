@@ -68,7 +68,7 @@ const PatientDetails = ({ closeForm, patient }) => {
     <div className="absolute z-50 inset-0 flex items-center justify-center bg-dark-a0/80">
       <div
         ref={dialogRef}
-        className="relative bg-light-a0 p-6 m-4 rounded-lg max-w-2xl max-h-[90vh] overflow-y-auto w-full"
+        className="relative bg-surface-a0 p-6 m-4 rounded-lg max-w-2xl max-h-[90vh] overflow-y-auto w-full"
       >
         <div className="absolute right-6">
           <button

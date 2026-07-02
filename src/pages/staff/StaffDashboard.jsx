@@ -90,7 +90,7 @@ const StaffDashboard = () => {
       )}
 
       {/* Stat cards */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4 mt-8">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4 mt-6">
         {cards.map((c) => (
           <DashboardCard
             key={c.title}
@@ -100,6 +100,7 @@ const StaffDashboard = () => {
             iconClass={c.iconClass}
             to={c.to}
             subtitle={c.subtitle}
+            compact
           />
         ))}
       </div>

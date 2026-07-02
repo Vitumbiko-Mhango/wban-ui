@@ -75,7 +75,7 @@ const AddUserForm = ({ closeForm, onSubmit, user }) => {
       <form
         ref={formRef}
         onSubmit={handleSubmit(submitHandler, onError)}
-        className="relative bg-light-a0 p-6 rounded-lg max-w-xl w-full shadow-lg"
+        className="relative bg-surface-a0 p-6 rounded-lg max-w-xl w-full shadow-lg"
       >
         {/* Close */}
         <div className="absolute right-4 top-4">

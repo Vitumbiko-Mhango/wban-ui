@@ -7,13 +7,14 @@
  *  - Shows the real server error message (locked out, wrong password, etc.)
  */
 
-import { Eye, EyeOff, LoaderCircle } from "lucide-react";
+import { Eye, EyeOff, LoaderCircle, Moon, Sun } from "lucide-react";
 import React, { useState } from "react";
 import { useNavigate } from "react-router";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuth } from "../../context/AuthContext";
+import { useTheme } from "../../context/ThemeContext";
 
 const schema = z.object({
   username: z
@@ -31,6 +32,7 @@ const Login = () => {
   const [generalError, setGeneralError] = useState("");
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { isDark, toggleTheme } = useTheme();
 
   const {
     register,
@@ -60,8 +62,17 @@ const Login = () => {
   };
 
   return (
-    <div className="h-screen flex items-center justify-center bg-gray-100 m-4">
-      <div className="w-full max-w-md p-8 bg-white rounded-lg shadow-md">
+    <div className="relative h-screen flex items-center justify-center bg-surface-a10 m-4">
+      <button
+        type="button"
+        onClick={toggleTheme}
+        aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+        title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+        className="absolute right-4 top-4 inline-flex size-9 items-center justify-center rounded-md border border-surface-a30 bg-surface-a0 text-dark-a0/70 transition-colors hover:bg-surface-a20 hover:text-primary-a20 focus:outline-none focus:ring-2 focus:ring-primary-a20/30 cursor-pointer"
+      >
+        {isDark ? <Sun className="size-4" /> : <Moon className="size-4" />}
+      </button>
+      <div className="w-full max-w-md p-8 bg-surface-a0 rounded-lg shadow-md">
         {/* Header */}
         <div className="mb-6 text-center">
           <h1 className="text-3xl text-primary-a20 font-bold">WBAN</h1>
@@ -131,7 +142,7 @@ const Login = () => {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full mt-2 py-2 px-4 bg-primary-a20 text-light-a0 font-semibold rounded-md hover:bg-primary-a30 focus:outline-none focus:ring-1 focus:ring-primary-a20 focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-300 cursor-pointer"
+            className="w-full mt-2 py-2 px-4 bg-primary-a20 text-white font-semibold rounded-md hover:bg-primary-a30 focus:outline-none focus:ring-1 focus:ring-primary-a20 focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-300 cursor-pointer"
           >
             {isSubmitting ? (
               <span className="flex items-center justify-center gap-2">

@@ -7,7 +7,6 @@ import {
   BedDouble,
   Bell,
   ClipboardList,
-  ClipboardPlus,
   LayoutDashboard,
   SlidersHorizontal,
   Users,
@@ -27,7 +26,6 @@ const Dashboard = () => {
       icon: ArrowRightLeft,
       link: "/staff/ward-transfer",
     },
-    { name: "NEWS2 Score", icon: ClipboardPlus, link: "/staff/news2" },
     {
       name: "Alert Thresholds",
       icon: SlidersHorizontal,
